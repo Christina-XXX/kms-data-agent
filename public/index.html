@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>满坤 KMS · 知识管理平台</title>
+<script src="https://registry.npmmirror.com/echarts/5.5.0/files/dist/echarts.min.js"></script>
+<script src="https://registry.npmmirror.com/marked/12.0.0/files/marked.min.js"></script>
+<style>
+	:root {
+		--bg: #fdf2f6;
+		--panel: #ffffff;
+		--border: #f6d5e2;
+		--text: #4a3540;
+		--muted: #b0889a;
+		--accent: #ec4899;
+		--accent-dark: #db2777;
+		--accent-soft: #fdf2f8;
+	}
+	* { box-sizing: border-box; margin: 0; padding: 0; }
+	html, body { height: 100%; }
+	body { font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); }
+	.app { display: flex; height: 100vh; overflow: hidden; }
+
+	/* 侧栏通用 */
+	aside { background: #fff; display: flex; flex-direction: column; overflow: hidden; transition: width 0.2s; flex-shrink: 0; }
+	aside.collapsed { width: 40px !important; }
+	aside.collapsed .panel-body, aside.collapsed .panel-title, aside.collapsed .head-actions { display: none; }
+	aside.collapsed .panel-head { justify-content: center; }
+	.panel-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 12px 8px; gap: 6px; }
+	.panel-title { font-weight: 600; font-size: 14px; }
+	.head-actions { display: flex; gap: 4px; }
+	.icon-btn { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 3px 8px; cursor: pointer; font-size: 13px; color: var(--muted); }
+	.icon-btn:hover { background: #fdf2f6; }
+	.panel-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+	.resizer { width: 4px; cursor: col-resize; flex-shrink: 0; background: transparent; }
+	.resizer:hover { background: #f6c4d8; }
+
+	/* 左栏 */
+	.left { width: 250px; border-right: 1px solid var(--border); }
+	#newChat { margin: 0 12px 8px; padding: 7px 0; background: var(--accent-soft); color: var(--accent-dark); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; font-size: 13px; font-family: inherit; }
+	#newChat:hover { background: #fbe7f0; }
+	#historyList { flex: 1; overflow-y: auto; padding: 6px 10px 12px; }
+	.history-item { position: relative; padding: 9px 26px 9px 12px; border-radius: 10px; cursor: pointer; margin-bottom: 4px; border: 1px solid transparent; }
+	.history-item:hover { background: #fdf2f6; border-color: var(--border); }
+	.history-item .t { font-size: 13px; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.history-item .d { font-size: 11px; color: var(--muted); }
+	.history-item .del { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: none; background: none; cursor: pointer; color: #d0a0b4; font-size: 14px; display: none; }
+	.history-item:hover .del { display: block; }
+	.history-item .del:hover { color: #e11d48; }
+	.empty-tip { padding: 20px; text-align: center; color: var(--muted); font-size: 13px; }
+
+	/* 中栏 */
+	.center { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+	header { background: var(--panel); border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+	header .logo { width: 38px; height: 38px; border-radius: 50%; overflow: hidden; flex-shrink: 0; border: 1px solid var(--border); }
+	header h1 { font-size: 16px; font-weight: 600; white-space: nowrap; }
+	nav { display: flex; gap: 6px; margin-left: 8px; flex-wrap: wrap; }
+	nav .tab { background: none; border: 1px solid transparent; border-radius: 10px; padding: 7px 14px; cursor: pointer; font-size: 13px; color: var(--muted); font-family: inherit; }
+	nav .tab:hover { background: #fdf2f6; }
+	nav .tab.active { background: var(--accent-soft); color: var(--accent-dark); border-color: #f6c4d8; font-weight: 600; }
+	header .status { font-size: 12px; color: var(--muted); margin-left: auto; }
+
+	main { flex: 1; overflow-y: auto; }
+	.view { display: none; padding: 24px; max-width: 900px; margin: 0 auto; }
+	.view.active { display: block; }
+
+	/* 聊天 */
+	.msg { margin-bottom: 20px; display: flex; }
+	.msg.user { justify-content: flex-end; }
+	.msg .bubble { max-width: 82%; padding: 12px 16px; border-radius: 16px; line-height: 1.7; font-size: 15px; white-space: pre-wrap; word-break: break-word; }
+	.msg.user .bubble { background: #fff; color: #1f2937; border: 1px solid var(--border); border-bottom-right-radius: 5px; }
+	.msg.assistant { align-items: flex-start; gap: 12px; }
+	.msg.assistant .bubble { background: var(--panel); border: 1px solid var(--border); border-bottom-left-radius: 5px; }
+	.avatar { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; border: 2px solid #ffd1e4; overflow: hidden; background: #fff; }
+	.assistant-wrap { max-width: 82%; display: flex; flex-direction: column; gap: 10px; }
+	.bubble.md { white-space: normal; }
+	.bubble.md p { margin: 6px 0; }
+	.bubble.md strong { color: var(--accent-dark); }
+	.bubble.md ul, .bubble.md ol { padding-left: 22px; margin: 6px 0; }
+	.bubble.md li { margin: 3px 0; }
+	.bubble.md table { border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+	.bubble.md th, .bubble.md td { border: 1px solid #f3c7d8; padding: 6px 10px; text-align: left; }
+	.bubble.md th { background: #fff0f5; font-weight: 600; }
+	.card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 14px; font-size: 13px; margin-bottom: 10px; }
+	.card .card-title { font-weight: 600; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+	.card .sql { background: #2d1b26; color: #ffc4dd; padding: 10px 12px; border-radius: 8px; font-family: Consolas, monospace; font-size: 12px; overflow-x: auto; margin-bottom: 12px; white-space: pre-wrap; word-break: break-all; }
+	.card table { width: 100%; border-collapse: collapse; font-size: 12px; }
+	.card th, .card td { border: 1px solid #f3c7d8; padding: 6px 10px; text-align: left; }
+	.card th { background: #fff0f5; font-weight: 600; }
+	.card .chart { width: 100%; height: 300px; margin-top: 12px; }
+	.card .count { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+	.tool-status { color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 8px; }
+	.tool-status .spinner { width: 14px; height: 14px; border: 2px solid #f6d5e2; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+	@keyframes spin { to { transform: rotate(360deg); } }
+	.welcome { text-align: center; color: var(--muted); padding: 40px 0; }
+	.welcome .big-avatar { width: 90px; height: 90px; margin: 0 auto 14px; border-radius: 50%; border: 3px solid #ffd1e4; overflow: hidden; }
+	.welcome h2 { font-size: 20px; color: var(--text); margin-bottom: 10px; }
+	.welcome p { font-size: 14px; line-height: 1.9; }
+	.welcome .tips { margin-top: 14px; padding: 12px 20px; background: #fff; border: 1px solid var(--border); border-radius: 12px; display: inline-block; text-align: left; }
+	.error { color: #dc2626; font-size: 13px; }
+
+	footer { background: var(--panel); border-top: 1px solid var(--border); padding: 16px 24px 24px; }
+	.input-bar { max-width: 900px; margin: 0 auto; display: flex; gap: 12px; align-items: flex-end; }
+	.user-avatar { width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; border: 1px solid #e8e2da; overflow: hidden; background: #fff; margin-bottom: 5px; }
+	#input { flex: 1; resize: none; border: 1px solid var(--border); border-radius: 14px; padding: 13px 16px; font-size: 15px; font-family: inherit; outline: none; min-height: 52px; max-height: 160px; background: #fff; }
+	#input:focus { border-color: var(--accent); }
+	#send { background: linear-gradient(135deg, #f472b6, #ec4899); color: #fff; border: none; border-radius: 14px; padding: 0 26px; height: 52px; font-size: 15px; cursor: pointer; flex-shrink: 0; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3); }
+	#send:hover { opacity: 0.92; }
+	#send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+	/* 模块页 */
+	.module-page { text-align: center; padding: 40px 20px; }
+	.module-page .icon { font-size: 44px; }
+	.module-page h2 { font-size: 20px; margin: 12px 0 10px; }
+	.module-page p { color: var(--muted); font-size: 14px; line-height: 1.9; }
+	.module-page .steps { margin: 20px auto 0; max-width: 560px; text-align: left; background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 18px 22px; }
+	.module-page .steps div { padding: 8px 0; font-size: 14px; border-bottom: 1px dashed var(--border); }
+	.module-page .steps div:last-child { border-bottom: none; }
+
+	/* 客诉 */
+	.complaint-list { display: flex; flex-direction: column; gap: 10px; }
+	.complaint-item { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; cursor: pointer; }
+	.complaint-item:hover { border-color: #f6c4d8; }
+	.complaint-item .row1 { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+	.complaint-item .row1 .badge { background: #fbe7f0; color: var(--accent-dark); font-size: 12px; padding: 2px 10px; border-radius: 20px; }
+	.complaint-item .row2 { margin-top: 6px; font-size: 12px; color: var(--muted); display: flex; gap: 16px; flex-wrap: wrap; }
+	.complaint-detail { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+	.complaint-detail h3 { font-size: 16px; margin-bottom: 12px; }
+	.complaint-detail .field { display: flex; padding: 7px 0; font-size: 13px; border-bottom: 1px dashed var(--border); }
+	.complaint-detail .field .k { width: 110px; color: var(--muted); flex-shrink: 0; }
+	.complaint-detail .field .v { flex: 1; line-height: 1.6; }
+	.detail-actions { margin-top: 16px; display: flex; gap: 10px; }
+	.detail-actions button, .back-btn { background: var(--accent-soft); color: var(--accent-dark); border: 1px solid var(--border); border-radius: 10px; padding: 9px 18px; cursor: pointer; font-size: 13px; font-family: inherit; }
+	.detail-actions button:hover, .back-btn:hover { background: #fbe7f0; }
+
+	/* 右栏 + 登录 */
+	.right { width: 260px; border-left: 1px solid var(--border); }
+	.login-box { padding: 20px 18px; text-align: center; }
+	.login-box .miffy { width: 76px; height: 76px; margin: 0 auto 12px; border-radius: 50%; border: 2px solid #e8e2da; overflow: hidden; background: #fff; }
+	.login-box .login-title { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+	.login-box input { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 14px; font-family: inherit; outline: none; margin-bottom: 10px; }
+	.login-box input:focus { border-color: var(--accent); }
+	.login-btns { display: flex; gap: 10px; margin-top: 4px; }
+	.login-btns button { flex: 1; border: 1px solid var(--border); background: var(--accent-soft); color: var(--accent-dark); border-radius: 10px; padding: 9px 0; cursor: pointer; font-size: 14px; font-family: inherit; }
+	.login-btns button.primary { background: linear-gradient(135deg, #f472b6, #ec4899); color: #fff; border: none; }
+	.login-btns button:hover { opacity: 0.92; }
+	.user-card { padding: 24px 20px; text-align: center; }
+	.user-card .uavatar { width: 84px; height: 84px; margin: 0 auto 12px; border-radius: 50%; border: 2px solid #e8e2da; overflow: hidden; background: #fff; }
+	.user-card .uname { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+	.user-card .urole { font-size: 13px; color: var(--muted); }
+	.user-fields { margin: 16px 16px 0; border-top: 1px solid var(--border); padding-top: 12px; }
+	.user-fields .f { display: flex; justify-content: space-between; padding: 8px 4px; font-size: 13px; }
+	.user-fields .f span:first-child { color: var(--muted); }
+	#logoutBtn { margin: 16px; padding: 9px 0; border: 1px solid var(--border); background: #fff; color: var(--muted); border-radius: 10px; cursor: pointer; font-size: 13px; font-family: inherit; }
+	#logoutBtn:hover { background: #fdf2f6; }
+
+	/* 知识录入 */
+	.entry-wrap { max-width: 900px; margin: 0 auto; }
+	.upload-zone { background: #fff; border: 2px dashed #f0c4d6; border-radius: 16px; padding: 50px 20px; text-align: center; cursor: pointer; transition: 0.2s; }
+	.upload-zone:hover { border-color: var(--accent); background: #fdf7fa; }
+	.upload-zone .icon { font-size: 40px; }
+	.upload-zone p { color: var(--muted); font-size: 14px; margin-top: 10px; }
+	.upload-zone .hint { font-size: 12px; color: #c9a3b4; }
+	.entry-section { margin-top: 18px; }
+	.sec-title { font-weight: 600; font-size: 14px; margin-bottom: 10px; }
+	.parse-table { background: #fff; border: 1px solid var(--border); border-radius: 12px; overflow: auto; max-height: 260px; }
+	.parse-table table { width: 100%; border-collapse: collapse; font-size: 12px; }
+	.parse-table th, .parse-table td { border: 1px solid #f3c7d8; padding: 6px 10px; text-align: left; white-space: nowrap; }
+	.parse-table th { background: #fff0f5; position: sticky; top: 0; }
+	.draft-md { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 16px; font-size: 14px; line-height: 1.7; white-space: normal; }
+	.draft-md p { margin: 6px 0; }
+	.draft-md h1, .draft-md h2 { font-size: 16px; margin: 10px 0 6px; color: var(--accent-dark); }
+	.draft-md table { border-collapse: collapse; font-size: 13px; }
+	.draft-md th, .draft-md td { border: 1px solid #f3c7d8; padding: 5px 9px; }
+	.draft-md strong { color: var(--accent-dark); }
+	.entry-actions { margin-top: 16px; display: flex; gap: 10px; align-items: center; }
+	.entry-actions input { flex: 1; border: 1px solid var(--border); border-radius: 10px; padding: 9px 14px; font-size: 14px; font-family: inherit; outline: none; }
+	.entry-actions input:focus { border-color: var(--accent); }
+	.entry-actions button { background: var(--accent-soft); color: var(--accent-dark); border: 1px solid var(--border); border-radius: 10px; padding: 9px 18px; cursor: pointer; font-size: 13px; font-family: inherit; }
+	.entry-actions button:hover { background: #fbe7f0; }
+	.entry-actions button.primary { background: linear-gradient(135deg, #f472b6, #ec4899); color: #fff; border: none; }
+</style>
+</head>
+<body>
+	<div class="app">
+		<aside class="left" id="leftPanel">
+			<div class="panel-head">
+				<span class="panel-title">🕘 历史对话</span>
+				<span class="head-actions">
+					<button class="icon-btn" id="clearHistory" title="清空所有">🗑</button>
+					<button class="icon-btn" id="collapseLeft" title="收起">«</button>
+				</span>
+			</div>
+			<div class="panel-body">
+				<button id="newChat">＋ 新对话</button>
+				<div id="historyList"><div class="empty-tip">加载中…</div></div>
+			</div>
+		</aside>
+		<div class="resizer" id="leftResizer"></div>
+
+		<div class="center">
+			<header>
+				<div class="logo" id="headerAvatar"></div>
+				<h1>满坤 KMS 知识管理平台</h1>
+				<nav>
+					<button class="tab active" data-tab="query">🔍 知识查询</button>
+					<button class="tab" data-tab="entry">📥 知识录入</button>
+					<button class="tab" data-tab="govern">🛡 知识治理</button>
+					<button class="tab" data-tab="exp">💡 经验沉淀</button>
+					<button class="tab" data-tab="complaint">📋 客诉管理</button>
+				</nav>
+				<span class="status" id="status">连接中…</span>
+			</header>
+
+			<main>
+				<div class="view active" id="view-query">
+					<div id="messages">
+						<div class="welcome">
+							<div class="big-avatar" id="welcomeAvatar"></div>
+							<h2>嗨,我是小芯 🎀</h2>
+							<p>知识查询模块:用自然语言问我,我来查数据、给结论</p>
+							<div class="tips">「各区域的销售金额是多少?」<br/>「最近有哪些客诉不合格品?」<br/>「哪条产线的不良率最高?」</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="view" id="view-entry">
+					<div class="entry-wrap">
+						<div class="upload-zone" id="uploadZone">
+							<div class="icon">📄</div>
+							<p>点击选择或拖拽文件到此处</p>
+							<p class="hint">支持 Excel(.xlsx/.xls)和 CSV,上传后 Agent 自动解析、抽取、分类并生成知识草稿</p>
+						</div>
+						<input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden />
+						<div id="entryResult" style="display:none">
+							<div class="entry-section">
+								<div class="sec-title">📋 解析结果预览</div>
+								<div class="parse-table" id="parsePreview"></div>
+							</div>
+							<div class="entry-section">
+								<div class="sec-title">🤖 Agent 知识草稿</div>
+								<div class="tool-status" id="draftLoading" style="display:none"><span class="spinner"></span>小芯正在解析、抽取、分类…</div>
+								<div class="draft-md" id="draftPreview"></div>
+							</div>
+							<div class="entry-actions">
+								<input id="entryTitle" placeholder="知识条目标题" />
+								<button id="regenDraft">🔄 重新生成</button>
+								<button id="confirmEntry" class="primary">✅ 确认入库</button>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="view" id="view-govern">
+					<div class="module-page">
+						<div class="icon">🛡</div>
+						<h2>知识治理</h2>
+						<p>发现知识存在过期、重复、差异或冲突时,Agent 分析影响并提出处理建议</p>
+						<div class="steps">
+							<div>① 过期检测:长期未更新的知识自动标记</div>
+							<div>② 重复检测:相似条目识别与合并建议</div>
+							<div>③ 差异/冲突:矛盾内容对比与影响分析</div>
+							<div>④ 治理建议:更新、合并、归档或删除</div>
+						</div>
+						<p style="margin-top:14px">（治理能力开发中,即将上线）</p>
+					</div>
+				</div>
+
+				<div class="view" id="view-exp">
+					<div class="module-page">
+						<div class="icon">💡</div>
+						<h2>经验沉淀</h2>
+						<p>描述一次问题处理经历,Agent 引导追问、总结并结构化沉淀为经验</p>
+						<div class="steps">
+							<div>① 描述问题背景与现象</div>
+							<div>② Agent 引导追问关键细节</div>
+							<div>③ 总结处理过程与根因</div>
+							<div>④ 结构化输出:背景 / 根因 / 措施 / 效果 / 预防</div>
+						</div>
+						<p style="margin-top:14px">（引导式沉淀开发中,即将上线）</p>
+					</div>
+				</div>
+
+				<div class="view" id="view-complaint">
+					<div class="complaint-toolbar"><button class="back-btn" id="backToList" style="display:none">← 返回列表</button></div>
+					<div class="complaint-list" id="complaintList"><div class="empty-tip">加载中…</div></div>
+					<div class="complaint-detail" id="complaintDetail" style="display:none"></div>
+				</div>
+			</main>
+
+			<footer id="queryFooter">
+				<div class="input-bar">
+					<div class="user-avatar" id="inputAvatar"></div>
+					<textarea id="input" placeholder="想问小芯什么?例如:查一下客诉记录" rows="1"></textarea>
+					<button id="send">发送</button>
+				</div>
+			</footer>
+		</div>
+
+		<div class="resizer" id="rightResizer"></div>
+		<aside class="right" id="rightPanel">
+			<div class="panel-head">
+				<span class="panel-title">👤 个人信息</span>
+				<span class="head-actions">
+					<button class="icon-btn" id="collapseRight" title="收起">»</button>
+				</span>
+			</div>
+			<div class="panel-body">
+				<div id="userArea"></div>
+			</div>
+		</aside>
+	</div>
+
+<script>
+	// —— 小芯头像:短发日系平涂 ——
+	const XIAOXIN_SVG = `
+	<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+		<circle cx="60" cy="60" r="58" fill="#f7f2e9"/>
+		<path d="M26 120 Q26 84 60 84 Q94 84 94 120 Z" fill="#efe4d5"/>
+		<ellipse cx="60" cy="61" rx="25" ry="23" fill="#fff6ef"/>
+		<path d="M35 52 Q35 22 60 22 Q85 22 85 52 Q85 56 75 56 L45 56 Q35 56 35 52 Z" fill="#b58a63"/>
+		<ellipse cx="50" cy="61" rx="5" ry="3.5" fill="#4a3728"/>
+		<ellipse cx="70" cy="61" rx="5" ry="3.5" fill="#4a3728"/>
+		<circle cx="51.5" cy="60" r="1.5" fill="#fff"/>
+		<circle cx="71.5" cy="60" r="1.5" fill="#fff"/>
+		<ellipse cx="43" cy="69" rx="5" ry="3" fill="#f5c6b8" opacity="0.55"/>
+		<ellipse cx="77" cy="69" rx="5" ry="3" fill="#f5c6b8" opacity="0.55"/>
+		<path d="M55 69 Q60 73 65 69" stroke="#c98a8a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+		<g transform="translate(78,24) rotate(15)">
+			<path d="M0 0 L-7 -5 L-5 1 L-7 7 L0 3Z" fill="#e8a0b4"/>
+			<path d="M0 0 L7 -5 L5 1 L7 7 L0 3Z" fill="#e8a0b4"/>
+			<circle cx="0" cy="0" r="2.6" fill="#d4889d"/>
+		</g>
+	</svg>`;
+	// —— 米菲兔头像(经典线条风格) ——
+	const MIFFY_SVG = `
+	<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+		<ellipse cx="36" cy="26" rx="11" ry="20" fill="#fff" stroke="#000" stroke-width="3" transform="rotate(-12 36 26)"/>
+		<ellipse cx="64" cy="26" rx="11" ry="20" fill="#fff" stroke="#000" stroke-width="3" transform="rotate(12 64 26)"/>
+		<ellipse cx="50" cy="60" rx="30" ry="27" fill="#fff" stroke="#000" stroke-width="3"/>
+		<circle cx="41" cy="57" r="3.5" fill="#000"/>
+		<circle cx="59" cy="57" r="3.5" fill="#000"/>
+		<path d="M45 66 L55 74 M55 66 L45 74" stroke="#000" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+	</svg>`;
+
+	document.getElementById("headerAvatar").innerHTML = XIAOXIN_SVG;
+	document.getElementById("welcomeAvatar").innerHTML = XIAOXIN_SVG;
+	document.getElementById("inputAvatar").innerHTML = MIFFY_SVG;
+
+	const messagesEl = document.getElementById("messages");
+	const inputEl = document.getElementById("input");
+	const sendEl = document.getElementById("send");
+	const statusEl = document.getElementById("status");
+	const historyList = document.getElementById("historyList");
+	const newChatBtn = document.getElementById("newChat");
+	const clearHistoryBtn = document.getElementById("clearHistory");
+	const queryFooter = document.getElementById("queryFooter");
+	const complaintList = document.getElementById("complaintList");
+	const complaintDetail = document.getElementById("complaintDetail");
+	const backToList = document.getElementById("backToList");
+	const userArea = document.getElementById("userArea");
+
+	let ws = null;
+	let assistantWrap = null;
+	let currentTextEl = null;
+	let currentRawText = "";
+	let toolStatusEl = null;
+
+	function setStatus(t) { statusEl.textContent = t; }
+	function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+	function clearWelcome() { const w = messagesEl.querySelector(".welcome"); if (w) w.remove(); }
+	function addUserMessage(text) {
+		clearWelcome();
+		const div = document.createElement("div"); div.className = "msg user";
+		const b = document.createElement("div"); b.className = "bubble"; b.textContent = text;
+		div.appendChild(b); messagesEl.appendChild(div); scrollBottom();
+	}
+	function newAssistantContainer() {
+		const div = document.createElement("div"); div.className = "msg assistant";
+		const avatar = document.createElement("div"); avatar.className = "avatar"; avatar.innerHTML = XIAOXIN_SVG;
+		const wrap = document.createElement("div"); wrap.className = "assistant-wrap";
+		div.appendChild(avatar); div.appendChild(wrap); messagesEl.appendChild(div);
+		assistantWrap = wrap; currentTextEl = null; currentRawText = ""; toolStatusEl = null; scrollBottom();
+	}
+	function appendDelta(text) {
+		if (!assistantWrap) newAssistantContainer();
+		if (!currentTextEl) { currentTextEl = document.createElement("div"); currentTextEl.className = "bubble md"; assistantWrap.appendChild(currentTextEl); currentRawText = ""; }
+		currentRawText += text; currentTextEl.innerHTML = marked.parse(currentRawText); scrollBottom();
+	}
+	function showToolStatus() {
+		if (!assistantWrap) newAssistantContainer();
+		currentTextEl = null; currentRawText = "";
+		toolStatusEl = document.createElement("div"); toolStatusEl.className = "tool-status";
+		toolStatusEl.innerHTML = '<span class="spinner"></span>小芯正在处理…';
+		assistantWrap.appendChild(toolStatusEl); scrollBottom();
+	}
+	function hideToolStatus() { if (toolStatusEl) { toolStatusEl.remove(); toolStatusEl = null; } }
+	function showQueryResult(payload) {
+		hideToolStatus();
+		if (!assistantWrap) newAssistantContainer();
+		currentTextEl = null; currentRawText = "";
+		const card = document.createElement("div"); card.className = "card";
+		const title = document.createElement("div"); title.className = "card-title"; title.textContent = `查询结果(共 ${payload.count} 行)`; card.appendChild(title);
+		const sqlEl = document.createElement("div"); sqlEl.className = "sql"; sqlEl.textContent = payload.sql; card.appendChild(sqlEl);
+		const rows = payload.rows || [];
+		if (rows.length) {
+			const cols = Object.keys(rows[0]);
+			const tw = document.createElement("div"); tw.style.overflowX = "auto";
+			let html = "<table><thead><tr>"; cols.forEach((c) => { html += `<th>${escapeHtml(c)}</th>`; });
+			html += "</tr></thead><tbody>";
+			rows.slice(0, 50).forEach((r) => { html += "<tr>"; cols.forEach((c) => { html += `<td>${escapeHtml(r[c])}</td>`; }); html += "</tr>"; });
+			html += "</tbody></table>"; if (rows.length > 50) html += '<div class="count">仅显示前 50 行</div>';
+			tw.innerHTML = html; card.appendChild(tw);
+			const numCols = cols.filter((c) => typeof rows[0][c] === "number");
+			if (numCols.length) { const cd = document.createElement("div"); cd.className = "chart"; card.appendChild(cd); renderChart(cd, rows, cols, numCols); }
+		} else { const e2 = document.createElement("div"); e2.className = "count"; e2.textContent = "(查询结果为空)"; card.appendChild(e2); }
+		assistantWrap.appendChild(card); scrollBottom();
+	}
+	function renderChart(el, rows, cols, numCols) {
+		const catCol = cols.find((c) => typeof rows[0][c] !== "number") || cols[0];
+		const chart = echarts.init(el);
+		chart.setOption({
+			color: ["#ec4899", "#f472b6", "#fb7185", "#c084fc", "#60a5fa", "#f59e0b"],
+			tooltip: { trigger: "axis" }, legend: numCols.length > 1 ? { data: numCols } : undefined,
+			grid: { left: 70, right: 20, top: 40, bottom: 70 },
+			xAxis: { type: "category", data: rows.map((r) => r[catCol]), axisLabel: { rotate: rows.length > 6 ? 35 : 0, fontSize: 11 } },
+			yAxis: { type: "value" },
+			series: numCols.map((c) => ({ name: c, type: "bar", data: rows.map((r) => r[c]), barMaxWidth: 40, itemStyle: { borderRadius: [6, 6, 0, 0] } })),
+		});
+		window.addEventListener("resize", () => chart.resize());
+	}
+	function endTurn() { hideToolStatus(); currentTextEl = null; currentRawText = ""; assistantWrap = null; sendEl.disabled = false; inputEl.focus(); }
+	function showError(msg) { if (!assistantWrap) newAssistantContainer(); const err = document.createElement("div"); err.className = "bubble error"; err.textContent = "出错了: " + msg; assistantWrap.appendChild(err); endTurn(); }
+	function scrollBottom() { messagesEl.scrollTop = messagesEl.scrollHeight; }
+
+	// —— 模块切换 ——
+	const views = { query: document.getElementById("view-query"), entry: document.getElementById("view-entry"), govern: document.getElementById("view-govern"), exp: document.getElementById("view-exp"), complaint: document.getElementById("view-complaint") };
+	document.querySelectorAll("nav .tab").forEach((tab) => {
+		tab.addEventListener("click", () => {
+			const name = tab.dataset.tab;
+			document.querySelectorAll("nav .tab").forEach((t) => t.classList.toggle("active", t === tab));
+			Object.entries(views).forEach(([k, el]) => el.classList.toggle("active", k === name));
+			queryFooter.style.display = name === "query" ? "" : "none";
+			if (name === "complaint") loadComplaints();
+		});
+	});
+
+	// —— 侧栏收起 / 调宽 ——
+	const leftPanel = document.getElementById("leftPanel");
+	const rightPanel = document.getElementById("rightPanel");
+	const collapseLeft = document.getElementById("collapseLeft");
+	const collapseRight = document.getElementById("collapseRight");
+	collapseLeft.addEventListener("click", () => {
+		leftPanel.classList.toggle("collapsed");
+		collapseLeft.textContent = leftPanel.classList.contains("collapsed") ? "»" : "«";
+	});
+	collapseRight.addEventListener("click", () => {
+		rightPanel.classList.toggle("collapsed");
+		collapseRight.textContent = rightPanel.classList.contains("collapsed") ? "«" : "»";
+	});
+	let dragTarget = null;
+	document.getElementById("leftResizer").addEventListener("mousedown", (e) => { e.preventDefault(); dragTarget = "left"; });
+	document.getElementById("rightResizer").addEventListener("mousedown", (e) => { e.preventDefault(); dragTarget = "right"; });
+	document.addEventListener("mousemove", (e) => {
+		if (!dragTarget) return;
+		if (dragTarget === "left") { const w = Math.min(460, Math.max(180, e.clientX)); leftPanel.classList.remove("collapsed"); leftPanel.style.width = w + "px"; }
+		else { const w = Math.min(460, Math.max(180, window.innerWidth - e.clientX)); rightPanel.classList.remove("collapsed"); rightPanel.style.width = w + "px"; }
+	});
+	document.addEventListener("mouseup", () => { dragTarget = null; });
+
+	// —— 历史(含删除) ——
+	async function loadHistoryList() {
+		try {
+			const res = await fetch("/api/history");
+			const list = await res.json();
+			historyList.innerHTML = "";
+			if (!Array.isArray(list) || !list.length) { historyList.innerHTML = '<div class="empty-tip">还没有历史对话</div>'; return; }
+			list.forEach((item) => {
+				const div = document.createElement("div"); div.className = "history-item";
+				const t = document.createElement("div"); t.className = "t"; t.textContent = item.title;
+				const d = document.createElement("div"); d.className = "d"; d.textContent = new Date(item.time).toLocaleString("zh-CN");
+				const del = document.createElement("button"); del.className = "del"; del.textContent = "✕"; del.title = "删除";
+				del.onclick = (e) => { e.stopPropagation(); deleteHistory(item.id); };
+				div.appendChild(t); div.appendChild(d); div.appendChild(del);
+				div.onclick = () => viewHistory(item.id);
+				historyList.appendChild(div);
+			});
+		} catch { historyList.innerHTML = '<div class="empty-tip">加载失败</div>'; }
+	}
+	async function deleteHistory(id) { await fetch("/api/history?id=" + id, { method: "DELETE" }); loadHistoryList(); }
+	clearHistoryBtn.addEventListener("click", async () => { if (confirm("确定清空所有历史对话?")) { await fetch("/api/history", { method: "DELETE" }); loadHistoryList(); } });
+	async function viewHistory(id) {
+		try {
+			const res = await fetch("/api/history?id=" + id);
+			const rec = await res.json();
+			if (!rec || rec.error || !Array.isArray(rec.messages)) return;
+			renderHistory(rec);
+		} catch {}
+	}
+	function renderHistory(rec) {
+		messagesEl.innerHTML = ""; assistantWrap = null; currentTextEl = null; currentRawText = ""; toolStatusEl = null;
+		rec.messages.forEach((m) => {
+			if (m.role === "user") addUserMessage(m.text);
+			else if (m.role === "assistant") {
+				newAssistantContainer();
+				(m.segments || []).forEach((seg) => {
+					if (seg.type === "text") { const el = document.createElement("div"); el.className = "bubble md"; el.innerHTML = marked.parse(seg.text); assistantWrap.appendChild(el); currentTextEl = null; }
+					else if (seg.type === "query") showQueryResult(seg);
+				});
+			}
+		});
+		scrollBottom();
+	}
+	function newChat() {
+		messagesEl.innerHTML = "";
+		const w = document.createElement("div"); w.className = "welcome";
+		w.innerHTML = `<div class="big-avatar">${XIAOXIN_SVG}</div><h2>嗨,我是小芯 🎀</h2><p>知识查询模块:用自然语言问我,我来查数据、给结论</p><div class="tips">「各区域的销售金额是多少?」<br/>「最近有哪些客诉不合格品?」<br/>「哪条产线的不良率最高?」</div>`;
+		messagesEl.appendChild(w);
+	}
+
+	// —— 客诉管理 ——
+	async function loadComplaints() {
+		backToList.style.display = "none"; complaintDetail.style.display = "none"; complaintList.style.display = "";
+		try {
+			const res = await fetch("/api/complaints");
+			const list = await res.json();
+			complaintList.innerHTML = "";
+			if (!list.length) { complaintList.innerHTML = '<div class="empty-tip">暂无客诉数据</div>'; return; }
+			list.forEach((c) => {
+				const div = document.createElement("div"); div.className = "complaint-item";
+				div.innerHTML = `<div class="row1"><span class="badge">${escapeHtml(c.defect)}</span><b>${escapeHtml(c.car_no)}</b><span style="color:#b0889a;font-size:12px">${escapeHtml(c.process)}</span></div><div class="row2"><span>料号:${escapeHtml(c.part_no)}</span><span>跟进人:${escapeHtml(c.owner)}</span><span>结案:${escapeHtml(c.close_date)}</span><span>${escapeHtml(c.status)}</span></div>`;
+				div.onclick = () => showComplaintDetail(c);
+				complaintList.appendChild(div);
+			});
+		} catch { complaintList.innerHTML = '<div class="empty-tip">加载失败</div>'; }
+	}
+	function showComplaintDetail(c) {
+		complaintList.style.display = "none"; backToList.style.display = ""; complaintDetail.style.display = "";
+		const fields = [["CAR单据编号", c.car_no], ["发现工序", c.process], ["责任工序", c.resp_process], ["料号", c.part_no], ["缺陷名称", c.defect], ["异常描述", c.description], ["不合格总数", c.qty], ["在线WIP", c.wip], ["产品处理方式", c.handling], ["原因分析", c.cause], ["改善对策", c.action], ["品质跟进人", c.owner], ["跟进结果", c.result], ["问题性质", c.nature], ["结案状态", c.status], ["结案日期", c.close_date]];
+		let html = `<h3>${escapeHtml(c.car_no)} · ${escapeHtml(c.defect)}</h3>`;
+		fields.forEach(([k, v]) => { if (v) html += `<div class="field"><span class="k">${escapeHtml(k)}</span><span class="v">${escapeHtml(v)}</span></div>`; });
+		html += `<div class="detail-actions"><button onclick="genReport('8d')">📄 生成 8D 报告</button><button onclick="genReport('fa')">🔬 FA 失效分析</button></div>`;
+		complaintDetail.innerHTML = html;
+		complaintDetail._complaint = c;
+	}
+	window.genReport = function (type) {
+		const c = complaintDetail._complaint; if (!c) return;
+		document.querySelector('nav .tab[data-tab="query"]').click();
+		const info = `CAR单号:${c.car_no}\n发现工序:${c.process}\n料号:${c.part_no}\n缺陷名称:${c.defect}\n异常描述:${c.description}\n不合格总数:${c.qty}\n产品处理方式:${c.handling}\n原因分析:${c.cause}\n改善对策:${c.action}\n品质跟进人:${c.owner}\n跟进结果:${c.result}\n问题性质:${c.nature}`;
+		const prompt = type === "8d" ? `请根据以下客诉信息,生成一份标准的 8D 报告(D1 团队组建、D2 问题描述、D3 临时措施、D4 根本原因、D5 永久纠正措施、D6 验证、D7 预防再发、D8 总结),用 Markdown 格式:\n\n${info}` : `请根据以下客诉信息,进行 FA 失效分析(失效现象、失效机理、失效根因、验证方法、改进建议),用 Markdown 格式:\n\n${info}`;
+		sendText(prompt);
+	};
+	backToList.onclick = loadComplaints;
+
+	// —— 知识录入 ——
+	const uploadZone = document.getElementById("uploadZone");
+	const fileInput = document.getElementById("fileInput");
+	const entryResult = document.getElementById("entryResult");
+	const parsePreview = document.getElementById("parsePreview");
+	const draftLoading = document.getElementById("draftLoading");
+	const draftPreview = document.getElementById("draftPreview");
+	const entryTitle = document.getElementById("entryTitle");
+	const confirmEntry = document.getElementById("confirmEntry");
+	const regenDraft = document.getElementById("regenDraft");
+	let lastParsed = null;
+	let lastDraft = "";
+	uploadZone.addEventListener("click", () => fileInput.click());
+	uploadZone.addEventListener("dragover", (e) => e.preventDefault());
+	uploadZone.addEventListener("drop", (e) => { e.preventDefault(); handleEntryFile(e.dataTransfer.files[0]); });
+	fileInput.addEventListener("change", (e) => handleEntryFile(e.target.files[0]));
+	function readFileBase64(file) { return new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(String(r.result).split(",")[1] || ""); r.onerror = reject; r.readAsDataURL(file); }); }
+	async function handleEntryFile(file) {
+		if (!file) return;
+		const base64 = await readFileBase64(file);
+		let data;
+		try { const res = await fetch("/api/upload", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fileName: file.name, content: base64 }) }); data = await res.json(); } catch { alert("上传失败"); return; }
+		if (data.error) { alert(data.error); return; }
+		lastParsed = data; uploadZone.style.display = "none"; entryResult.style.display = "";
+		renderParsePreview(data); entryTitle.value = data.fileName.replace(/\.(xlsx|xls|csv)$/i, ""); generateDraft(data);
+	}
+	function renderParsePreview(data) {
+		const { headers, rows, totalRows } = data;
+		let html = `<div class="count" style="padding:10px 12px 0">共 ${totalRows} 行,显示前 ${rows.length} 行</div><table><thead><tr>`;
+		headers.forEach((h) => { html += `<th>${escapeHtml(h)}</th>`; });
+		html += "</tr></thead><tbody>";
+		rows.forEach((r) => { html += "<tr>"; headers.forEach((_, i) => { html += `<td>${escapeHtml(r[i])}</td>`; }); html += "</tr>"; });
+		html += "</tbody></table>"; parsePreview.innerHTML = html;
+	}
+	async function generateDraft(data) {
+		draftPreview.innerHTML = ""; draftLoading.style.display = ""; confirmEntry.disabled = true;
+		let r;
+		try { const res = await fetch("/api/draft", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }); r = await res.json(); } catch { r = { error: "生成失败" }; }
+		draftLoading.style.display = "none"; confirmEntry.disabled = false;
+		if (r.error) { draftPreview.innerHTML = `<span class="error">${escapeHtml(r.error)}</span>`; return; }
+		lastDraft = r.draft; draftPreview.innerHTML = marked.parse(r.draft);
+		const meta = extractMeta(r.draft); if (meta.title) entryTitle.value = meta.title;
+	}
+	function extractMeta(draft) { return { title: draft.match(/标题[:：]\s*(.+)/)?.[1]?.trim(), category: draft.match(/分类[:：]\s*(.+)/)?.[1]?.trim(), tags: draft.match(/标签[:：]\s*(.+)/)?.[1]?.trim() }; }
+	confirmEntry.addEventListener("click", async () => {
+		if (!lastDraft) return;
+		const meta = extractMeta(lastDraft);
+		await fetch("/api/knowledge", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: entryTitle.value || meta.title || lastParsed.fileName, category: meta.category || "", tags: meta.tags || "", summary: lastDraft.replace(/[#*`|>]/g, "").slice(0, 120), content: lastDraft, source: lastParsed.fileName }) });
+		alert("✅ 已入库,可在知识查询中检索");
+		uploadZone.style.display = ""; entryResult.style.display = "none"; fileInput.value = "";
+	});
+	regenDraft.addEventListener("click", () => { if (lastParsed) generateDraft(lastParsed); });
+
+	// —— 登录 ——
+	let token = localStorage.getItem("kms_token") || "";
+	let currentUser = null;
+	async function initAuth() {
+		if (token) {
+			try { const res = await fetch("/api/me", { headers: { "x-token": token } }); currentUser = await res.json(); } catch { currentUser = null; }
+			if (!currentUser) { token = ""; localStorage.removeItem("kms_token"); }
+		}
+		renderUserPanel();
+	}
+	function renderUserPanel() {
+		if (currentUser) {
+			userArea.innerHTML = `
+				<div class="user-card">
+					<div class="uavatar">${MIFFY_SVG}</div>
+					<div class="uname">${escapeHtml(currentUser.phone)}</div>
+					<div class="urole">${escapeHtml(currentUser.department || "未填写部门")}</div>
+				</div>
+				<div class="user-fields">
+					<div class="f"><span>手机号</span><span>${escapeHtml(currentUser.phone)}</span></div>
+					<div class="f"><span>所属部门</span><span>${escapeHtml(currentUser.department || "未填写")}</span></div>
+				</div>
+				<button id="logoutBtn">退出登录</button>`;
+			document.getElementById("logoutBtn").onclick = () => { token = ""; currentUser = null; localStorage.removeItem("kms_token"); renderUserPanel(); };
+		} else {
+			userArea.innerHTML = `
+				<div class="login-box">
+					<div class="miffy">${MIFFY_SVG}</div>
+					<div class="login-title">登录 / 注册</div>
+					<input id="loginPhone" placeholder="手机号" maxlength="11" />
+					<input id="loginPwd" type="password" placeholder="密码(至少6位)" />
+					<input id="loginDept" placeholder="所属部门(注册时填写)" />
+					<div class="login-btns"><button id="doLogin" class="primary">登录</button><button id="doRegister">注册</button></div>
+				</div>`;
+			document.getElementById("doLogin").onclick = doLogin;
+			document.getElementById("doRegister").onclick = doRegister;
+		}
+	}
+	async function doLogin() {
+		const phone = document.getElementById("loginPhone").value.trim();
+		const password = document.getElementById("loginPwd").value;
+		if (!phone || !password) { alert("请输入手机号和密码"); return; }
+		const res = await fetch("/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone, password }) });
+		const data = await res.json();
+		if (data.error) { alert(data.error); return; }
+		token = data.token; currentUser = data.user; localStorage.setItem("kms_token", token); renderUserPanel();
+	}
+	async function doRegister() {
+		const phone = document.getElementById("loginPhone").value.trim();
+		const password = document.getElementById("loginPwd").value;
+		const department = document.getElementById("loginDept").value.trim();
+		if (!phone || !password || !department) { alert("请填写手机号、密码和所属部门"); return; }
+		const res = await fetch("/api/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone, password, department }) });
+		const data = await res.json();
+		if (data.error) { alert(data.error); return; }
+		alert("注册成功,请登录");
+	}
+
+	// —— WebSocket ——
+	function connect() {
+		ws = new WebSocket(`ws://${location.host}`);
+		ws.onopen = () => setStatus("已连接");
+		ws.onmessage = (e) => {
+			let msg; try { msg = JSON.parse(e.data); } catch { return; }
+			switch (msg.type) {
+				case "ready": setStatus("模型: " + msg.model); break;
+				case "delta": appendDelta(msg.text); break;
+				case "tool_start": showToolStatus(); break;
+				case "query": showQueryResult(msg); break;
+				case "tool_end": hideToolStatus(); break;
+				case "done": endTurn(); loadHistoryList(); break;
+				case "error": showError(msg.message); break;
+			}
+		};
+		ws.onclose = () => setStatus("连接断开,请刷新页面");
+		ws.onerror = () => setStatus("连接失败");
+	}
+	function sendText(text) { if (!ws || ws.readyState !== 1) return; addUserMessage(text); newAssistantContainer(); sendEl.disabled = true; ws.send(JSON.stringify({ type: "ask", text })); }
+	function send() { const text = inputEl.value.trim(); if (!text) return; inputEl.value = ""; inputEl.style.height = "auto"; sendText(text); }
+	sendEl.addEventListener("click", send);
+	inputEl.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
+	inputEl.addEventListener("input", () => { inputEl.style.height = "auto"; inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + "px"; });
+	newChatBtn.addEventListener("click", newChat);
+
+	loadHistoryList();
+	initAuth();
+	connect();
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "kms-data-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "PCB 企业 KMS 知识库管理系统 - Data Agent(基于 Pi Agent 二次开发)",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server/index.js",
+    "dev": "node --env-file-if-exists=.env --watch server/index.js"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "^1.1.0",
+    "typebox": "^1.3.27",
+    "ws": "^8.18.0",
+    "xlsx": "^0.18.5"
+  }
+}
