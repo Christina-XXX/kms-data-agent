@@ -180,6 +180,11 @@
 	.entry-actions button { background: var(--accent-soft); color: var(--accent-dark); border: 1px solid var(--border); border-radius: 10px; padding: 9px 18px; cursor: pointer; font-size: 13px; font-family: inherit; }
 	.entry-actions button:hover { background: #fbe7f0; }
 	.entry-actions button.primary { background: linear-gradient(135deg, #f472b6, #ec4899); color: #fff; border: none; }
+	.exp-box { margin: 20px auto 0; max-width: 560px; text-align: left; }
+	.exp-box textarea { width: 100%; min-height: 120px; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: 14px; font-family: inherit; outline: none; resize: vertical; }
+	.exp-box textarea:focus { border-color: var(--accent); }
+	.exp-box button { margin-top: 10px; width: 100%; background: linear-gradient(135deg, #f472b6, #ec4899); color: #fff; border: none; border-radius: 12px; padding: 11px 0; cursor: pointer; font-size: 15px; font-family: inherit; }
+	.exp-box button:hover { opacity: 0.92; }
 </style>
 </head>
 <body>
@@ -271,14 +276,14 @@
 					<div class="module-page">
 						<div class="icon">💡</div>
 						<h2>经验沉淀</h2>
-						<p>描述一次问题处理经历,Agent 引导追问、总结并结构化沉淀为经验</p>
-						<div class="steps">
-							<div>① 描述问题背景与现象</div>
-							<div>② Agent 引导追问关键细节</div>
-							<div>③ 总结处理过程与根因</div>
-							<div>④ 结构化输出:背景 / 根因 / 措施 / 效果 / 预防</div>
+						<p>描述一次问题处理经历,小芯会引导你补充关键细节,最后总结成结构化经验</p>
+						<div class="exp-box">
+							<textarea id="expInput" placeholder="例如:今天电镀工序出现面铜偏薄,我们排查发现是铜球液位不足,补加铜球后解决了,想沉淀成经验..."></textarea>
+							<button id="expSubmit">开始沉淀 💡</button>
 						</div>
-						<p style="margin-top:14px">（引导式沉淀开发中,即将上线）</p>
+						<div class="steps">
+							<div>小芯会引导你补充:背景 / 现象 / 根因 / 措施 / 效果 / 预防</div>
+						</div>
 					</div>
 				</div>
 
@@ -605,6 +610,17 @@
 		uploadZone.style.display = ""; entryResult.style.display = "none"; fileInput.value = "";
 	});
 	regenDraft.addEventListener("click", () => { if (lastParsed) generateDraft(lastParsed); });
+
+	// —— 经验沉淀 ——
+	const expInput = document.getElementById("expInput");
+	const expSubmit = document.getElementById("expSubmit");
+	expSubmit.addEventListener("click", () => {
+		const text = expInput.value.trim();
+		if (!text) { alert("请先描述你的问题处理经历"); return; }
+		document.querySelector('nav .tab[data-tab="query"]').click();
+		sendText("我要沉淀一条经验。请先引导我补充关键信息(背景、现象、根因、处理措施、效果、预防措施),如果信息已经足够就直接帮我总结成结构化的经验条目(Markdown 格式):\n\n" + text);
+		expInput.value = "";
+	});
 
 	// —— 登录 ——
 	let token = localStorage.getItem("kms_token") || "";
