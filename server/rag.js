@@ -228,20 +228,28 @@ export function governanceReport(db) {
 
 /** —— 知识冲突检测 ——
  * 检测"同一指标名在多条有效知识中给出不同阈值"的潜在冲突。
- * 规则:句子含规范语气(要求/不低于/标准/≥…),从指标词之后取最近数值,按指标分组比对,
- * 数值相对差 ≥2% 且来自不同条目时判为冲突。仅做候选提示,最终由人工确认。
+ * 规则:从指标词之后取阈值(优先"比较词+数值",无比较词时兜底"指标词后最近数值"),
+ * 按指标分组比对,数值相对差 ≥2% 且来自不同条目时判为冲突。仅做候选提示,最终由人工确认。
  */
 
-/** 指标关键词(按原文分组,避免"面铜/孔铜"混淆) */
-const METRIC_WORDS = [
-	"面铜", "孔铜", "铜厚", "镀铜厚度",
-	"线宽", "线距", "线间距", "阻抗",
-	"板厚", "光学点", "涨缩", "公差",
-	"铜球液位", "电流密度", "蚀刻",
+/** 指标定义:关键词别名 + 无单位时的默认单位(用于跨条目数值统一比较) */
+const METRIC_DEFS = [
+	{ key: "面铜厚度", words: ["面铜", "镀铜厚度", "面铜厚度"], defaultUnit: "um" },
+	{ key: "孔铜", words: ["孔铜", "孔铜厚度"], defaultUnit: "um" },
+	{ key: "铜厚", words: ["铜厚"], defaultUnit: "um" },
+	{ key: "线宽", words: ["线宽"], defaultUnit: "um" },
+	{ key: "线距", words: ["线距", "线间距"], defaultUnit: "um" },
+	{ key: "板厚", words: ["板厚"], defaultUnit: "mm" },
+	{ key: "光学点", words: ["光学点", "光学点距离"], defaultUnit: "mm" },
+	{ key: "涨缩", words: ["涨缩"], defaultUnit: "mm" },
+	{ key: "蚀刻", words: ["蚀刻"], defaultUnit: "um" },
 ];
 
-/** 比较词 + 数值 + 可选单位(用于判断句子是否含阈值,并从指标词之后取第一个匹配) */
+/** 比较词 + 数值 + 可选单位(高置信阈值信号) */
 const THRESHOLD_RE = /(不低于|不高于|不超过|不得低于|不得高于|大于|小于|≥|≤|>=|<=|要求|应为?|需为?|标准为?|控制为?)\s*(\d+(?:\.\d+)?)\s*(?:±\s*\d+(?:\.\d+)?)?\s*(um|μm|mm|mil|oz)?/;
+
+/** 纯数值(兜底:指标词后最近数值,可能无比较词) */
+const VALUE_RE = /(\d+(?:\.\d+)?)\s*(?:±\s*\d+(?:\.\d+)?)?\s*(um|μm|mm|mil|oz)?/;
 
 /** 单位统一换算成微米(仅用于同指标内数值比较) */
 function toMicron(value, unit) {
@@ -249,7 +257,26 @@ function toMicron(value, unit) {
 	if (u === "mm") return value * 1000;
 	if (u === "mil") return value * 25.4;
 	if (u === "oz") return value * 35000; // 1oz 铜厚 ≈ 35um
-	return value; // um / μm / 无单位
+	return value; // um / μm
+}
+
+/** 从指标词之后取阈值:优先"比较词+数值",无比较词时兜底"最近数值" */
+function pickValue(tail, defaultUnit) {
+	// 高置信:比较词 + 数值
+	const m1 = tail.match(THRESHOLD_RE);
+	if (m1) return { value: parseFloat(m1[2]), unit: (m1[3] || defaultUnit || "").toLowerCase() };
+	// 兜底:指标词后最近数值(带长度单位,或纯数字)
+	const m2 = tail.match(VALUE_RE);
+	if (!m2) return null;
+	const unit = (m2[2] || defaultUnit || "").toLowerCase();
+	if (!m2[2]) {
+		// 无单位纯数字:排除编号(IPC-6012 / V1.6)与数量(120PNL)
+		const prev = tail[m2.index - 1];
+		if (prev && /[0-9A-Za-z-]/.test(prev)) return null;
+		const after = tail.slice(m2.index + m2[0].length);
+		if (/^[0-9A-Za-z]/.test(after)) return null;
+	}
+	return { value: parseFloat(m2[1]), unit };
 }
 
 /** 从单条知识正文提取 [{ metric, value(um), valueRaw, raw(原句) }] */
@@ -260,25 +287,25 @@ function extractThresholds(row) {
 	for (const line of lines) {
 		const sents = line.split(/(?<=[。!?;；])\s*/).filter(Boolean);
 		for (const sent of sents) {
-			if (!THRESHOLD_RE.test(sent)) continue;
-			for (const w of METRIC_WORDS) {
-				const idx = sent.indexOf(w);
+			for (const def of METRIC_DEFS) {
+				// 取该指标任一别名在句中的最早出现位置
+				let idx = -1;
+				for (const w of def.words) {
+					const i = sent.indexOf(w);
+					if (i >= 0 && (idx < 0 || i < idx)) idx = i;
+				}
 				if (idx < 0) continue;
-				const tail = sent.slice(idx);
-				const m = tail.match(THRESHOLD_RE);
-				if (!m) continue;
-				const value = parseFloat(m[2]);
-				const unit = m[3] || "";
-				const key = `${w}|${value}|${unit}`;
+				const got = pickValue(sent.slice(idx), def.defaultUnit);
+				if (!got) continue;
+				const key = `${def.key}|${got.value}|${got.unit}`;
 				if (seen.has(key)) continue;
 				seen.add(key);
 				out.push({
-					metric: w,
-					value: toMicron(value, unit),
-					valueRaw: `${value}${unit}`,
+					metric: def.key,
+					value: toMicron(got.value, got.unit),
+					valueRaw: `${got.value}${got.unit}`,
 					raw: sent.trim().slice(0, 120),
 				});
-				break; // 每句一个指标只取一次
 			}
 		}
 	}
