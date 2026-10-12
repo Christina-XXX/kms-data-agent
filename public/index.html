@@ -185,6 +185,76 @@
 	.exp-box textarea:focus { border-color: var(--accent); }
 	.exp-box button { margin-top: 10px; width: 100%; background: linear-gradient(135deg, #f472b6, #ec4899); color: #fff; border: none; border-radius: 12px; padding: 11px 0; cursor: pointer; font-size: 15px; font-family: inherit; }
 	.exp-box button:hover { opacity: 0.92; }
+
+	/* 专家模式选择器 */
+	.role-select { margin-left: auto; border: 1px solid var(--border); border-radius: 10px; padding: 6px 8px; font-size: 13px; font-family: inherit; color: var(--text); background: #fff; outline: none; cursor: pointer; }
+	.role-select:focus { border-color: var(--accent); }
+
+	/* 引用卡片 + 交付物卡片 */
+	.cite-card { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 14px; font-size: 13px; }
+	.cite-card .card-title { font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+	.cite-item { border-bottom: 1px dashed var(--border); padding: 8px 0; }
+	.cite-item:last-child { border-bottom: none; }
+	.cite-item .t { font-weight: 600; color: var(--accent-dark); }
+	.cite-item .m { color: var(--muted); font-size: 12px; margin: 3px 0; }
+	.cite-item .e { color: var(--text); font-size: 12px; line-height: 1.6; }
+	.artifact-card { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 14px; font-size: 13px; }
+	.artifact-card a { color: var(--accent-dark); font-weight: 600; }
+
+	/* 表单通用 */
+	.frow { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+	.frow input { flex: 1; min-width: 120px; }
+	.entry-fields input { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 9px 14px; font-size: 14px; font-family: inherit; outline: none; margin-bottom: 10px; }
+	.entry-fields input:focus { border-color: var(--accent); }
+	.exp-form input, .exp-form textarea { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 9px 14px; font-size: 14px; font-family: inherit; outline: none; margin-bottom: 10px; }
+	.exp-form textarea { min-height: 140px; resize: vertical; }
+	.exp-form input:focus, .exp-form textarea:focus { border-color: var(--accent); }
+	.exp-form button, .wb-card button { background: var(--accent-soft); color: var(--accent-dark); border: 1px solid var(--border); border-radius: 10px; padding: 9px 16px; cursor: pointer; font-size: 13px; font-family: inherit; }
+	.exp-form button:hover, .wb-card button:hover { background: #fbe7f0; }
+	.exp-form button.primary { background: linear-gradient(135deg, #f472b6, #ec4899); color: #fff; border: none; }
+	.exp-form button.primary:hover { opacity: 0.92; }
+
+	/* 治理 */
+	.gov-summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+	.gov-summary .gstat { flex: 1; min-width: 120px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px; text-align: center; }
+	.gov-summary .gstat .n { font-size: 22px; font-weight: 700; color: var(--accent-dark); }
+	.gov-summary .gstat .l { font-size: 12px; color: var(--muted); }
+	.gov-section { margin-bottom: 16px; }
+	.gov-item { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+	.gov-item .info { flex: 1; font-size: 13px; }
+	.gov-item .info .t { font-weight: 600; }
+	.gov-item .info .m { color: var(--muted); font-size: 12px; margin-top: 2px; }
+	.gov-item button { background: var(--accent-soft); color: var(--accent-dark); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 12px; font-family: inherit; }
+	.gov-item button:hover { background: #fbe7f0; }
+	.badge { display: inline-block; background: #fbe7f0; color: var(--accent-dark); font-size: 12px; padding: 2px 8px; border-radius: 20px; }
+	.badge.warn { background: #fef3c7; color: #b45309; }
+	.badge.danger { background: #fee2e2; color: #b91c1c; }
+
+	/* 审核队列 + 交付物列表 */
+	.review-list { display: flex; flex-direction: column; gap: 8px; }
+	.review-item { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+	.review-item .t { font-weight: 600; font-size: 14px; }
+	.review-item .m { color: var(--muted); font-size: 12px; margin: 4px 0; }
+	.review-item .c { font-size: 13px; line-height: 1.6; white-space: pre-wrap; max-height: 160px; overflow-y: auto; }
+	.review-item .btns { margin-top: 8px; display: flex; gap: 8px; align-items: center; }
+	.review-item button { background: var(--accent-soft); color: var(--accent-dark); border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 12px; font-family: inherit; }
+	.review-item button.approve { background: linear-gradient(135deg, #34d399, #10b981); color: #fff; border: none; }
+	.review-item button.reject { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+	.review-item button:hover { opacity: 0.92; }
+	.review-item a { text-decoration: none; }
+
+	/* 工作台 */
+	.wb-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+	.wb-card { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+	.wb-card .wb-title { font-weight: 600; margin-bottom: 6px; }
+	.wb-card p { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+	.wb-card input { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; font-size: 14px; font-family: inherit; outline: none; margin-bottom: 10px; }
+	.wb-card input:focus { border-color: var(--accent); }
+	.diff { margin-top: 12px; font-family: Consolas, monospace; font-size: 12px; max-height: 300px; overflow: auto; border: 1px solid var(--border); border-radius: 10px; background: #fdf7fa; }
+	.diff .d-add { background: #e7f9ef; color: #047857; }
+	.diff .d-del { background: #fdeaea; color: #b91c1c; }
+	.diff .d-same { color: #b0889a; }
+	.diff div { padding: 2px 10px; white-space: pre-wrap; word-break: break-all; }
 </style>
 </head>
 <body>
@@ -213,8 +283,10 @@
 					<button class="tab" data-tab="entry">📥 知识录入</button>
 					<button class="tab" data-tab="govern">🛡 知识治理</button>
 					<button class="tab" data-tab="exp">💡 经验沉淀</button>
+					<button class="tab" data-tab="workbench">🧰 工作台</button>
 					<button class="tab" data-tab="complaint">📋 客诉管理</button>
 				</nav>
+				<select id="roleSelect" class="role-select" title="选择专家模式"></select>
 				<span class="status" id="status">连接中…</span>
 			</header>
 
@@ -248,8 +320,23 @@
 								<div class="tool-status" id="draftLoading" style="display:none"><span class="spinner"></span>小芯正在解析、抽取、分类…</div>
 								<div class="draft-md" id="draftPreview"></div>
 							</div>
-							<div class="entry-actions">
+							<div class="entry-fields">
 								<input id="entryTitle" placeholder="知识条目标题" />
+								<div class="frow">
+									<input id="entryVersion" placeholder="版本(v1.0)" />
+									<input id="entryCategory" placeholder="分类" />
+								</div>
+								<div class="frow">
+									<input id="entryValidFrom" placeholder="有效期起(YYYY-MM-DD)" />
+									<input id="entryValidTo" placeholder="有效期止(留空=长期)" />
+								</div>
+								<div class="frow">
+									<input id="entryScope" placeholder="适用范围(如:电镀工序/全厂)" />
+									<input id="entryPermission" placeholder="权限(all/quality,engineering)" />
+								</div>
+								<input id="entryStandard" placeholder="依据标准(如:IPC-6012)" />
+							</div>
+							<div class="entry-actions">
 								<button id="regenDraft">🔄 重新生成</button>
 								<button id="confirmEntry" class="primary">✅ 确认入库</button>
 							</div>
@@ -258,32 +345,68 @@
 				</div>
 
 				<div class="view" id="view-govern">
-					<div class="module-page">
-						<div class="icon">🛡</div>
-						<h2>知识治理</h2>
-						<p>发现知识存在过期、重复、差异或冲突时,Agent 分析影响并提出处理建议</p>
-						<div class="steps">
-							<div>① 过期检测:长期未更新的知识自动标记</div>
-							<div>② 重复检测:相似条目识别与合并建议</div>
-							<div>③ 差异/冲突:矛盾内容对比与影响分析</div>
-							<div>④ 治理建议:更新、合并、归档或删除</div>
-						</div>
-						<p style="margin-top:14px">（治理能力开发中,即将上线）</p>
+					<div class="entry-wrap">
+						<div class="sec-title">🛡 知识治理 · 版本 / 有效期 / 适用范围 / 权限 / 重复检测</div>
+						<div class="gov-summary" id="govSummary"></div>
+						<div id="govSections"></div>
 					</div>
 				</div>
 
 				<div class="view" id="view-exp">
-					<div class="module-page">
-						<div class="icon">💡</div>
-						<h2>经验沉淀</h2>
-						<p>描述一次问题处理经历,小芯会引导你补充关键细节,最后总结成结构化经验</p>
+					<div class="entry-wrap">
+						<div class="sec-title">💡 经验沉淀 · AI 整理 + 人工审核入库</div>
 						<div class="exp-box">
 							<textarea id="expInput" placeholder="例如:今天电镀工序出现面铜偏薄,我们排查发现是铜球液位不足,补加铜球后解决了,想沉淀成经验..."></textarea>
-							<button id="expSubmit">开始沉淀 💡</button>
+							<button id="expSubmit">① AI 整理经验 💡</button>
 						</div>
-						<div class="steps">
-							<div>小芯会引导你补充:背景 / 现象 / 根因 / 措施 / 效果 / 预防</div>
+						<div class="exp-form">
+							<div class="sec-title">② 整理结果(可编辑)→ 提交审核</div>
+							<input id="expTitle" placeholder="经验标题" />
+							<div class="frow">
+								<input id="expCategory" placeholder="分类(品质案例/工程案例/设备案例)" />
+								<input id="expTags" placeholder="标签,逗号分隔" />
+							</div>
+							<textarea id="expContent" placeholder="结构化经验:背景 / 现象 / 根因 / 处理措施 / 效果验证 / 预防措施"></textarea>
+							<div class="frow">
+								<input id="expSource" placeholder="来源(如:CAR 编号 / 工序 / 设备)" />
+								<button id="expFillFromChat" type="button">用最近一次 AI 整理结果填入</button>
+							</div>
+							<button id="expSubmitReview" class="primary">提交审核入库 ✅</button>
 						</div>
+						<div class="sec-title" style="margin-top:20px">③ 审核队列(通过后存回知识库)</div>
+						<div class="review-list" id="reviewList"><div class="empty-tip">加载中…</div></div>
+					</div>
+				</div>
+
+				<div class="view" id="view-workbench">
+					<div class="entry-wrap">
+						<div class="sec-title">🧰 工作台 · Agent 帮你完成具体工作(Harness + Skills + Tools)</div>
+						<div class="wb-grid">
+							<div class="wb-card">
+								<div class="wb-title">✅ 清单生成</div>
+								<p>把任务拆解成可勾选的检查清单并保存交付物</p>
+								<input id="wbChecklistTask" placeholder="例如:电镀线开线点检清单" />
+								<button id="wbChecklistBtn">生成清单</button>
+							</div>
+							<div class="wb-card">
+								<div class="wb-title">📑 文件比较</div>
+								<p>对比两份文本/Markdown/CSV/JSON 的差异</p>
+								<div class="frow">
+									<input type="file" id="wbFileA" />
+									<input type="file" id="wbFileB" />
+								</div>
+								<button id="wbCompareBtn">开始比较</button>
+								<div class="diff" id="wbDiff" style="display:none"></div>
+							</div>
+							<div class="wb-card">
+								<div class="wb-title">📊 报告生成</div>
+								<p>8D / FA / 工作总结报告(客诉详情页也有入口)</p>
+								<input id="wbReportTopic" placeholder="报告主题,如:8月品质总结" />
+								<button id="wbReportBtn">生成报告</button>
+							</div>
+						</div>
+						<div class="sec-title" style="margin-top:20px">📦 我的交付物</div>
+						<div class="review-list" id="artifactList"><div class="empty-tip">暂无交付物</div></div>
 					</div>
 				</div>
 
@@ -440,7 +563,7 @@
 	function scrollBottom() { messagesEl.scrollTop = messagesEl.scrollHeight; }
 
 	// —— 模块切换 ——
-	const views = { query: document.getElementById("view-query"), entry: document.getElementById("view-entry"), govern: document.getElementById("view-govern"), exp: document.getElementById("view-exp"), complaint: document.getElementById("view-complaint") };
+	const views = { query: document.getElementById("view-query"), entry: document.getElementById("view-entry"), govern: document.getElementById("view-govern"), exp: document.getElementById("view-exp"), workbench: document.getElementById("view-workbench"), complaint: document.getElementById("view-complaint") };
 	document.querySelectorAll("nav .tab").forEach((tab) => {
 		tab.addEventListener("click", () => {
 			const name = tab.dataset.tab;
@@ -448,6 +571,9 @@
 			Object.entries(views).forEach(([k, el]) => el.classList.toggle("active", k === name));
 			queryFooter.style.display = name === "query" ? "" : "none";
 			if (name === "complaint") loadComplaints();
+			if (name === "govern") loadGovernance();
+			if (name === "exp") loadReviews();
+			if (name === "workbench") loadArtifacts();
 		});
 	});
 
@@ -512,6 +638,8 @@
 				(m.segments || []).forEach((seg) => {
 					if (seg.type === "text") { const el = document.createElement("div"); el.className = "bubble md"; el.innerHTML = marked.parse(seg.text); assistantWrap.appendChild(el); currentTextEl = null; }
 					else if (seg.type === "query") showQueryResult(seg);
+					else if (seg.type === "citations") showCitations(seg.results);
+					else if (seg.type === "artifact") showArtifact(seg);
 				});
 			}
 		});
@@ -568,6 +696,13 @@
 	const entryTitle = document.getElementById("entryTitle");
 	const confirmEntry = document.getElementById("confirmEntry");
 	const regenDraft = document.getElementById("regenDraft");
+	const entryVersion = document.getElementById("entryVersion");
+	const entryCategory = document.getElementById("entryCategory");
+	const entryValidFrom = document.getElementById("entryValidFrom");
+	const entryValidTo = document.getElementById("entryValidTo");
+	const entryScope = document.getElementById("entryScope");
+	const entryPermission = document.getElementById("entryPermission");
+	const entryStandard = document.getElementById("entryStandard");
 	let lastParsed = null;
 	let lastDraft = "";
 	uploadZone.addEventListener("click", () => fileInput.click());
@@ -599,28 +734,240 @@
 		draftLoading.style.display = "none"; confirmEntry.disabled = false;
 		if (r.error) { draftPreview.innerHTML = `<span class="error">${escapeHtml(r.error)}</span>`; return; }
 		lastDraft = r.draft; draftPreview.innerHTML = marked.parse(r.draft);
-		const meta = extractMeta(r.draft); if (meta.title) entryTitle.value = meta.title;
+		const meta = extractMeta(r.draft); if (meta.title) entryTitle.value = meta.title; setEntryFields(meta);
 	}
-	function extractMeta(draft) { return { title: draft.match(/标题[:：]\s*(.+)/)?.[1]?.trim(), category: draft.match(/分类[:：]\s*(.+)/)?.[1]?.trim(), tags: draft.match(/标签[:：]\s*(.+)/)?.[1]?.trim() }; }
+	function extractMeta(draft) {
+		return {
+			title: draft.match(/标题[:：]\s*(.+)/)?.[1]?.trim(),
+			category: draft.match(/分类[:：]\s*(.+)/)?.[1]?.trim(),
+			tags: draft.match(/标签[:：]\s*(.+)/)?.[1]?.trim(),
+			version: draft.match(/版本[:：]\s*(.+)/)?.[1]?.trim(),
+			valid: draft.match(/有效期[:：]\s*(.+)/)?.[1]?.trim(),
+			scope: draft.match(/适用范围[:：]\s*(.+)/)?.[1]?.trim(),
+			permission: draft.match(/权限[:：]\s*(.+)/)?.[1]?.trim(),
+			standard: draft.match(/依据标准[:：]\s*(.+)/)?.[1]?.trim(),
+		};
+	}
+	function setEntryFields(meta) {
+		entryVersion.value = meta.version || "";
+		entryCategory.value = meta.category || "";
+		entryScope.value = meta.scope || "";
+		entryPermission.value = meta.permission || "";
+		entryStandard.value = meta.standard || "";
+		if (meta.valid) {
+			const m = meta.valid.match(/(\d{4}-\d{2}-\d{2})\s*[~\-—到]\s*(\d{4}-\d{2}-\d{2})/);
+			if (m) { entryValidFrom.value = m[1]; entryValidTo.value = m[2]; }
+		}
+	}
 	confirmEntry.addEventListener("click", async () => {
 		if (!lastDraft) return;
 		const meta = extractMeta(lastDraft);
-		await fetch("/api/knowledge", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: entryTitle.value || meta.title || lastParsed.fileName, category: meta.category || "", tags: meta.tags || "", summary: lastDraft.replace(/[#*`|>]/g, "").slice(0, 120), content: lastDraft, source: lastParsed.fileName }) });
+		await fetch("/api/knowledge", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+			title: entryTitle.value || meta.title || lastParsed.fileName,
+			category: entryCategory.value || meta.category || "",
+			tags: meta.tags || "",
+			summary: lastDraft.replace(/[#*`|>]/g, "").slice(0, 120),
+			content: lastDraft,
+			source: lastParsed.fileName,
+			version: entryVersion.value || meta.version || "1.0",
+			valid_from: entryValidFrom.value || null,
+			valid_to: entryValidTo.value || null,
+			scope: entryScope.value || meta.scope || "全厂",
+			permission: entryPermission.value || meta.permission || "all",
+			standard_ref: entryStandard.value || meta.standard || null,
+		}) });
 		alert("✅ 已入库,可在知识查询中检索");
 		uploadZone.style.display = ""; entryResult.style.display = "none"; fileInput.value = "";
 	});
 	regenDraft.addEventListener("click", () => { if (lastParsed) generateDraft(lastParsed); });
 
-	// —— 经验沉淀 ——
+	// —— 经验沉淀(Skill: experience-consolidation + 审核入库) ——
 	const expInput = document.getElementById("expInput");
 	const expSubmit = document.getElementById("expSubmit");
+	const expTitle = document.getElementById("expTitle");
+	const expCategory = document.getElementById("expCategory");
+	const expTags = document.getElementById("expTags");
+	const expContent = document.getElementById("expContent");
+	const expSource = document.getElementById("expSource");
+	const expSubmitReview = document.getElementById("expSubmitReview");
+	const expFillFromChat = document.getElementById("expFillFromChat");
+	const reviewList = document.getElementById("reviewList");
+	let lastAssistantMarkdown = "";
 	expSubmit.addEventListener("click", () => {
 		const text = expInput.value.trim();
 		if (!text) { alert("请先描述你的问题处理经历"); return; }
 		document.querySelector('nav .tab[data-tab="query"]').click();
-		sendText("我要沉淀一条经验。请先引导我补充关键信息(背景、现象、根因、处理措施、效果、预防措施),如果信息已经足够就直接帮我总结成结构化的经验条目(Markdown 格式):\n\n" + text);
+		sendText("我要沉淀一条经验。请先 load_skill(experience-consolidation),再引导我补充关键信息(背景、现象、根因、处理措施、效果验证、预防措施),信息足够就直接总结成结构化经验条目(Markdown 格式):\n\n" + text);
 		expInput.value = "";
 	});
+	expFillFromChat.addEventListener("click", () => {
+		if (!lastAssistantMarkdown) { alert("还没有 AI 整理结果,请先在知识查询里完成一次经验整理"); return; }
+		expContent.value = lastAssistantMarkdown;
+		const m = extractMeta(lastAssistantMarkdown);
+		if (m.title) expTitle.value = m.title;
+		if (m.category) expCategory.value = m.category;
+		if (m.tags) expTags.value = m.tags;
+	});
+	expSubmitReview.addEventListener("click", async () => {
+		if (!expTitle.value.trim() || !expContent.value.trim()) { alert("请填写标题和整理结果"); return; }
+		const res = await fetch("/api/experience", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: expTitle.value.trim(), category: expCategory.value.trim(), tags: expTags.value.trim(), summary: expContent.value.trim().slice(0, 120), content: expContent.value.trim(), source: expSource.value.trim() }) });
+		const r = await res.json();
+		if (r.error) { alert(r.error); return; }
+		alert("✅ 已提交审核,审核通过后将存回知识库");
+		expTitle.value = expCategory.value = expTags.value = expContent.value = expSource.value = "";
+		loadReviews();
+	});
+	async function loadReviews() {
+		try {
+			const res = await fetch("/api/experience?status=pending");
+			const list = await res.json();
+			reviewList.innerHTML = "";
+			if (!list.length) { reviewList.innerHTML = '<div class="empty-tip">暂无待审核经验</div>'; return; }
+			list.forEach((e) => {
+				const div = document.createElement("div"); div.className = "review-item";
+				div.innerHTML = `<div class="t">${escapeHtml(e.title)}</div><div class="m">${escapeHtml(e.category || "")} · ${escapeHtml(e.tags || "")} · 提交:${escapeHtml(e.author || "")}</div><div class="c">${escapeHtml(e.content)}</div>`;
+				const btns = document.createElement("div"); btns.className = "btns";
+				const ok = document.createElement("button"); ok.className = "approve"; ok.textContent = "✅ 通过入库";
+				const no = document.createElement("button"); no.className = "reject"; no.textContent = "驳回";
+				ok.onclick = () => reviewExperience(e.id, "approve");
+				no.onclick = () => reviewExperience(e.id, "reject");
+				btns.appendChild(ok); btns.appendChild(no); div.appendChild(btns);
+				reviewList.appendChild(div);
+			});
+		} catch { reviewList.innerHTML = '<div class="empty-tip">加载失败</div>'; }
+	}
+	async function reviewExperience(id, action) {
+		await fetch("/api/experience/review", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action }) });
+		alert(action === "approve" ? "✅ 已通过并存入知识库" : "已驳回");
+		loadReviews();
+	}
+
+	// —— 专家模式 ——
+	const roleSelect = document.getElementById("roleSelect");
+	async function initRoles() {
+		try {
+			const res = await fetch("/api/roles");
+			const roles = await res.json();
+			roleSelect.innerHTML = roles.map((r) => `<option value="${r.id}">${r.emoji} ${r.name}</option>`).join("");
+			roleSelect.value = localStorage.getItem("kms_role") || "general";
+			roleSelect.addEventListener("change", () => localStorage.setItem("kms_role", roleSelect.value));
+		} catch { roleSelect.innerHTML = '<option value="general">🎀 通用助手</option>'; }
+	}
+
+	// —— 引用卡片 + 交付物卡片 ——
+	function showCitations(results) {
+		if (!assistantWrap) newAssistantContainer();
+		hideToolStatus();
+		currentTextEl = null; currentRawText = "";
+		if (!results || !results.length) return;
+		const card = document.createElement("div"); card.className = "cite-card";
+		const title = document.createElement("div"); title.className = "card-title"; title.textContent = `📚 引用依据(共 ${results.length} 条)`; card.appendChild(title);
+		results.forEach((r) => {
+			const item = document.createElement("div"); item.className = "cite-item";
+			const meta = [r.version ? `v${r.version}` : "", r.category || "", r.valid_from || r.valid_to ? `有效期:${r.valid_from || "不限"}~${r.valid_to || "长期"}` : "", r.scope ? `范围:${r.scope}` : "", r.standard_ref ? `标准:${r.standard_ref}` : ""].filter(Boolean).join(" · ");
+			item.innerHTML = `<div class="t">[${r.ref}] ${escapeHtml(r.title)}</div>${meta ? `<div class="m">${escapeHtml(meta)}</div>` : ""}<div class="e">${escapeHtml(r.excerpt)}</div>`;
+			card.appendChild(item);
+		});
+		assistantWrap.appendChild(card); scrollBottom();
+	}
+	function showArtifact(a) {
+		if (!assistantWrap) newAssistantContainer();
+		currentTextEl = null; currentRawText = "";
+		const card = document.createElement("div"); card.className = "artifact-card";
+		card.innerHTML = `📦 已生成交付物:<a href="${escapeHtml(a.url)}" download>${escapeHtml(a.title)}</a>`;
+		assistantWrap.appendChild(card); scrollBottom();
+	}
+
+	// —— 工作台 ——
+	const wbChecklistTask = document.getElementById("wbChecklistTask");
+	const wbChecklistBtn = document.getElementById("wbChecklistBtn");
+	const wbFileA = document.getElementById("wbFileA");
+	const wbFileB = document.getElementById("wbFileB");
+	const wbCompareBtn = document.getElementById("wbCompareBtn");
+	const wbDiff = document.getElementById("wbDiff");
+	const wbReportTopic = document.getElementById("wbReportTopic");
+	const wbReportBtn = document.getElementById("wbReportBtn");
+	const artifactList = document.getElementById("artifactList");
+	wbChecklistBtn.addEventListener("click", () => {
+		const task = wbChecklistTask.value.trim() || "通用工作清单";
+		document.querySelector('nav .tab[data-tab="query"]').click();
+		sendText(`请 load_skill(checklist) 后,为「${task}」生成一份可勾选的检查清单,并 save_artifact 保存为交付物。`);
+		wbChecklistTask.value = "";
+	});
+	wbReportBtn.addEventListener("click", () => {
+		const topic = wbReportTopic.value.trim() || "工作总结";
+		document.querySelector('nav .tab[data-tab="query"]').click();
+		sendText(`请为「${topic}」生成一份结构化报告(现状、数据、问题、建议),用 query_database 查数据佐证,并 save_artifact 保存为交付物。`);
+		wbReportTopic.value = "";
+	});
+	async function readTextFile(file) { return new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(String(r.result || "")); r.onerror = reject; r.readAsText(file); }); }
+	wbCompareBtn.addEventListener("click", async () => {
+		if (!wbFileA.files[0] || !wbFileB.files[0]) { alert("请选择两份文件"); return; }
+		const a = await readTextFile(wbFileA.files[0]);
+		const b = await readTextFile(wbFileB.files[0]);
+		const res = await fetch("/api/compare", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ a, b }) });
+		const data = await res.json();
+		wbDiff.style.display = "";
+		const stat = `<div class="d-same" style="padding:6px 10px">新增 ${data.stats.add} 行 · 删除 ${data.stats.del} 行 · 相同 ${data.stats.same} 行</div>`;
+		wbDiff.innerHTML = stat + data.diff.map((d) => `<div class="d-${d.type === "add" ? "add" : d.type === "del" ? "del" : "same"}">${d.type === "add" ? "+ " : d.type === "del" ? "- " : "  "}${escapeHtml(d.text) || " "}</div>`).join("");
+	});
+	async function loadArtifacts() {
+		try {
+			const res = await fetch("/api/artifacts");
+			const list = await res.json();
+			artifactList.innerHTML = "";
+			if (!list.length) { artifactList.innerHTML = '<div class="empty-tip">暂无交付物</div>'; return; }
+			list.forEach((a) => {
+				const div = document.createElement("div"); div.className = "review-item";
+				div.innerHTML = `<div class="t">${escapeHtml(a.title)}</div><div class="btns"><a href="${escapeHtml(a.url)}" download><button type="button">⬇️ 下载</button></a></div>`;
+				artifactList.appendChild(div);
+			});
+		} catch { artifactList.innerHTML = '<div class="empty-tip">加载失败</div>'; }
+	}
+
+	// —— 知识治理 ——
+	const govSummary = document.getElementById("govSummary");
+	const govSections = document.getElementById("govSections");
+	async function loadGovernance() {
+		try {
+			const res = await fetch("/api/governance");
+			const g = await res.json();
+			govSummary.innerHTML = `
+				<div class="gstat"><div class="n">${g.total}</div><div class="l">知识总数</div></div>
+				<div class="gstat"><div class="n" style="color:#b91c1c">${g.expired.length}</div><div class="l">已过期</div></div>
+				<div class="gstat"><div class="n" style="color:#b45309">${g.expiring.length}</div><div class="l">30天内到期</div></div>
+				<div class="gstat"><div class="n" style="color:#b45309">${g.duplicates.length}</div><div class="l">疑似重复</div></div>
+				<div class="gstat"><div class="n">${g.noVersion.length}</div><div class="l">无版本</div></div>`;
+			let html = "";
+			html += govSection("已过期", g.expired, "danger", (r) => `${r.title} · v${r.version || "?"} · 到期 ${r.valid_to}`);
+			html += govSection("30天内到期", g.expiring, "warn", (r) => `${r.title} · v${r.version || "?"} · 到期 ${r.valid_to}`);
+			html += govSection("疑似重复(同标题多版本)", g.duplicates, "warn", (d) => `${d.title} · ${d.count} 个版本`);
+			html += govSection("无版本标识", g.noVersion, "warn", (r) => `${r.title} · ${r.category || ""}`);
+			govSections.innerHTML = html || '<div class="empty-tip">知识库状态良好,无需治理 🎉</div>';
+			govSections.querySelectorAll("button[data-act]").forEach((btn) => {
+				btn.onclick = async () => {
+					const id = Number(btn.dataset.id);
+					const act = btn.dataset.act;
+					if (act === "delete") {
+						if (!confirm("确定删除该知识条目?")) return;
+						await fetch("/api/knowledge?id=" + id, { method: "DELETE" });
+					} else if (act === "archive") {
+						await fetch("/api/knowledge/status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status: "archived" }) });
+					}
+					loadGovernance();
+				};
+			});
+		} catch { govSummary.innerHTML = '<div class="empty-tip">加载失败</div>'; }
+	}
+	function govSection(label, items, badge, fmt) {
+		if (!items || !items.length) return "";
+		const rows = items.map((it) => {
+			const id = it.id != null ? it.id : "";
+			const dup = it.rows ? it.rows.map((x) => `#${x.id} v${x.version || "?"}(${x.valid_to || "长期"})`).join("、") : "";
+			return `<div class="gov-item"><div class="info"><div class="t">${escapeHtml(fmt(it))}</div>${dup ? `<div class="m">${escapeHtml(dup)}</div>` : ""}</div>${id ? `<button data-act="archive" data-id="${id}">归档</button><button data-act="delete" data-id="${id}">删除</button>` : ""}</div>`;
+		}).join("");
+		return `<div class="gov-section"><div class="sec-title">${label} <span class="badge ${badge === "danger" ? "danger" : "warn"}">${items.length}</span></div>${rows}</div>`;
+	}
 
 	// —— 登录 ——
 	let token = localStorage.getItem("kms_token") || "";
@@ -691,15 +1038,17 @@
 				case "delta": appendDelta(msg.text); break;
 				case "tool_start": showToolStatus(); break;
 				case "query": showQueryResult(msg); break;
+				case "citations": showCitations(msg.results); break;
+				case "artifact": showArtifact(msg); break;
 				case "tool_end": hideToolStatus(); break;
-				case "done": endTurn(); loadHistoryList(); break;
+				case "done": lastAssistantMarkdown = currentRawText; endTurn(); loadHistoryList(); break;
 				case "error": showError(msg.message); break;
 			}
 		};
 		ws.onclose = () => setStatus("连接断开,请刷新页面");
 		ws.onerror = () => setStatus("连接失败");
 	}
-	function sendText(text) { if (!ws || ws.readyState !== 1) return; addUserMessage(text); newAssistantContainer(); sendEl.disabled = true; ws.send(JSON.stringify({ type: "ask", text })); }
+	function sendText(text) { if (!ws || ws.readyState !== 1) return; addUserMessage(text); newAssistantContainer(); sendEl.disabled = true; ws.send(JSON.stringify({ type: "ask", text, role: roleSelect.value || "general" })); }
 	function send() { const text = inputEl.value.trim(); if (!text) return; inputEl.value = ""; inputEl.style.height = "auto"; sendText(text); }
 	sendEl.addEventListener("click", send);
 	inputEl.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
@@ -708,6 +1057,7 @@
 
 	loadHistoryList();
 	initAuth();
+	initRoles();
 	connect();
 </script>
 </body>

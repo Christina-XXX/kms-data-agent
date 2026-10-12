@@ -8,22 +8,38 @@ import { createHash, randomBytes } from "node:crypto";
 import * as XLSX from "xlsx";
 import { initDb } from "./db.js";
 import { createDataAgent } from "./agent.js";
+import { searchKnowledge, governanceReport } from "./rag.js";
+import { EXPERT_ROLES, getRole } from "./skills.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
 const HISTORY_DIR = join(__dirname, "../history");
+const ARTIFACT_DIR = join(__dirname, "../data/artifacts");
 mkdirSync(HISTORY_DIR, { recursive: true });
+mkdirSync(ARTIFACT_DIR, { recursive: true });
 
 console.log("① 初始化示例数据库(SQLite)...");
 const db = initDb();
 
-console.log("② 初始化 Data Agent(DeepSeek)...");
+let currentRole = "general"; // 当前专家模式(随每次提问更新)
+
+console.log("② 初始化 Data Agent(DeepSeek + RAG 检索 + Skills + Tools)...");
 const { session, model } = await createDataAgent(db, (payload) => {
 	// 数据库工具被调用时:记录到当前问答 + 推送给前端展示
 	if (current) {
 		current.segments.push({ type: "query", sql: payload.sql, rows: payload.rows, count: payload.count });
 	}
 	broadcast({ type: "query", sql: payload.sql, rows: payload.rows, count: payload.count });
+}, {
+	getRole: () => currentRole,
+	onSearch: (results) => {
+		if (current) current.segments.push({ type: "citations", results });
+		broadcast({ type: "citations", results });
+	},
+	onArtifact: (a) => {
+		if (current) current.segments.push({ type: "artifact", ...a });
+		broadcast({ type: "artifact", ...a });
+	},
 });
 console.log(`③ Data Agent 就绪,模型: ${model.provider}/${model.id}\n`);
 
@@ -81,6 +97,7 @@ const MIME = {
 	".js": "text/javascript; charset=utf-8",
 	".css": "text/css; charset=utf-8",
 	".json": "application/json; charset=utf-8",
+	".md": "text/markdown; charset=utf-8",
 	".svg": "image/svg+xml",
 	".png": "image/png",
 };
@@ -121,9 +138,14 @@ function buildDraftPrompt(fileName, headers, rows) {
 	return `请对以下导入的数据进行分析,完成知识抽取与分类,并生成一份知识条目草稿。严格用以下 Markdown 结构输出:
 
 # 标题:<简短标题>
-- 分类:<建议分类,如:客诉案例 / 工艺知识 / 质量缺陷>
+- 分类:<建议分类,如:标准规范 / 工艺知识 / 品质案例 / 工程案例 / 设备维护>
 - 标签:<3-5个标签,逗号分隔>
 - 摘要:<一句话概括>
+- 版本:<v1.0,或从数据中识别>
+- 有效期:<YYYY-MM-DD ~ YYYY-MM-DD,长期有效留空>
+- 适用范围:<如:全厂 / 电镀工序 / 成型>
+- 权限:<all 或 quality,engineering,equipment 的组合>
+- 依据标准:<如 IPC-6012,没有则留空>
 
 ## 正文
 <结构化知识内容,包含关键信息与要点>
@@ -132,6 +154,51 @@ function buildDraftPrompt(fileName, headers, rows) {
 数据列:${headers.join(", ")}
 数据内容(前30行):
 ${preview}`;
+}
+
+// —— 交付物(清单/报告/对比结果) ——
+function listArtifacts() {
+	try {
+		return readdirSync(ARTIFACT_DIR)
+			.filter((f) => f.endsWith(".md"))
+			.map((f) => {
+				let title = f;
+				try {
+					const content = readFileSync(join(ARTIFACT_DIR, f), "utf-8");
+					const m = content.match(/^#\s*(.+)$/m);
+					if (m) title = m[1].trim();
+				} catch {}
+				return { id: f, title, url: "/api/artifacts/" + f };
+			})
+			.sort((a, b) => b.id.localeCompare(a.id));
+	} catch {
+		return [];
+	}
+}
+
+// —— 行级差异对比(LCS) ——
+function diffLines(a, b) {
+	const al = String(a || "").split("\n");
+	const bl = String(b || "").split("\n");
+	const n = al.length, m = bl.length;
+	const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+	for (let i = n - 1; i >= 0; i--) {
+		for (let j = m - 1; j >= 0; j--) {
+			dp[i][j] = al[i] === bl[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+		}
+	}
+	const out = [];
+	let i = 0, j = 0;
+	while (i < n && j < m) {
+		if (al[i] === bl[j]) { out.push({ type: "same", text: al[i] }); i++; j++; }
+		else if (dp[i + 1][j] >= dp[i][j + 1]) { out.push({ type: "del", text: al[i] }); i++; }
+		else { out.push({ type: "add", text: bl[j] }); j++; }
+	}
+	while (i < n) { out.push({ type: "del", text: al[i] }); i++; }
+	while (j < m) { out.push({ type: "add", text: bl[j] }); j++; }
+	const stats = { add: 0, del: 0, same: 0 };
+	for (const d of out) stats[d.type]++;
+	return { diff: out, stats };
 }
 
 const server = http.createServer(async (req, res) => {
@@ -192,6 +259,20 @@ const server = http.createServer(async (req, res) => {
 		return;
 	}
 
+	// 专家角色列表
+	if (urlPath === "/api/roles") {
+		res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+		res.end(JSON.stringify(EXPERT_ROLES));
+		return;
+	}
+
+	// 知识治理分析(过期 / 即将过期 / 重复 / 无版本)
+	if (urlPath === "/api/governance") {
+		res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+		res.end(JSON.stringify(governanceReport(db)));
+		return;
+	}
+
 	// 客诉列表 API
 	if (urlPath === "/api/complaints") {
 		const url = new URL(req.url, "http://localhost");
@@ -220,7 +301,6 @@ const server = http.createServer(async (req, res) => {
 				wb = XLSX.read(buf, { type: "buffer" });
 			}
 			const sheet = wb.Sheets[wb.SheetNames[0]];
-			// 展开合并单元格,避免解析丢值
 			for (const m of sheet["!merges"] || []) {
 				const v = sheet[XLSX.utils.encode_cell({ r: m.s.r, c: m.s.c })]?.v;
 				if (v !== undefined && v !== null) {
@@ -245,20 +325,118 @@ const server = http.createServer(async (req, res) => {
 		return;
 	}
 
-	// 知识库
+	// 知识库(含版本/有效期/适用范围/权限/依据标准)
 	if (urlPath === "/api/knowledge") {
 		if (req.method === "POST") {
 			const body = await readBody(req);
-			db.prepare("INSERT INTO knowledge (title, category, tags, summary, content, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
-				body.title || "", body.category || "", body.tags || "", body.summary || "", body.content || "", body.source || "", new Date().toISOString(),
+			const now = new Date().toISOString();
+			if (body.id) {
+				db.prepare(`UPDATE knowledge SET title=?, category=?, tags=?, summary=?, content=?, source=?, version=?, valid_from=?, valid_to=?, scope=?, permission=?, status=?, standard_ref=?, updated_at=? WHERE id=?`).run(
+					body.title || "", body.category || "", body.tags || "", body.summary || "", body.content || "", body.source || "",
+					body.version || "1.0", body.valid_from || null, body.valid_to || null, body.scope || "全厂",
+					body.permission || "all", body.status || "approved", body.standard_ref || null, now, Number(body.id),
+				);
+			} else {
+				db.prepare(`INSERT INTO knowledge (title, category, tags, summary, content, source, created_at, version, valid_from, valid_to, scope, permission, status, standard_ref, author, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+					body.title || "", body.category || "", body.tags || "", body.summary || "", body.content || "", body.source || "", now,
+					body.version || "1.0", body.valid_from || null, body.valid_to || null, body.scope || "全厂",
+					body.permission || "all", body.status || "approved", body.standard_ref || null, body.author || "", now,
+				);
+			}
+			res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+			res.end(JSON.stringify({ ok: true }));
+		} else if (req.method === "DELETE") {
+			const id = Number(new URL(req.url, "http://localhost").searchParams.get("id"));
+			if (id) db.prepare("DELETE FROM knowledge WHERE id = ?").run(id);
+			res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+			res.end(JSON.stringify({ ok: true }));
+		} else {
+			const rows = db.prepare("SELECT * FROM knowledge ORDER BY id DESC").all();
+			res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+			res.end(JSON.stringify(rows));
+		}
+		return;
+	}
+
+	// 知识状态(归档/恢复)
+	if (urlPath === "/api/knowledge/status" && req.method === "POST") {
+		const body = await readBody(req);
+		db.prepare("UPDATE knowledge SET status = ? WHERE id = ?").run(body.status || "approved", Number(body.id));
+		res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+		res.end(JSON.stringify({ ok: true }));
+		return;
+	}
+
+	// 经验沉淀:提交 / 列表
+	if (urlPath === "/api/experience") {
+		const url = new URL(req.url, "http://localhost");
+		if (req.method === "POST") {
+			const body = await readBody(req);
+			const user = getAuthUser(req);
+			db.prepare(`INSERT INTO experience (title, category, tags, summary, content, source, author, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)`).run(
+				body.title || "", body.category || "", body.tags || "", body.summary || "", body.content || "", body.source || "",
+				user ? user.department || user.phone : "匿名", new Date().toISOString(),
 			);
 			res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
 			res.end(JSON.stringify({ ok: true }));
 		} else {
-			const rows = db.prepare("SELECT id, title, category, tags, summary, source, created_at FROM knowledge ORDER BY id DESC").all();
+			const status = url.searchParams.get("status");
+			const rows = status
+				? db.prepare("SELECT * FROM experience WHERE status = ? ORDER BY id DESC").all(status)
+				: db.prepare("SELECT * FROM experience ORDER BY id DESC").all();
 			res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
 			res.end(JSON.stringify(rows));
 		}
+		return;
+	}
+
+	// 经验审核:通过 → 存回知识库;驳回 → 标记
+	if (urlPath === "/api/experience/review" && req.method === "POST") {
+		const body = await readBody(req);
+		const user = getAuthUser(req);
+		const reviewer = user ? user.department || user.phone : "审核人";
+		const row = db.prepare("SELECT * FROM experience WHERE id = ?").get(Number(body.id));
+		res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+		if (!row) { res.end(JSON.stringify({ error: "记录不存在" })); return; }
+		if (body.action === "approve") {
+			const now = new Date().toISOString();
+			db.prepare(`INSERT INTO knowledge (title, category, tags, summary, content, source, created_at, version, valid_from, valid_to, scope, permission, status, standard_ref, author, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, '1.0', NULL, NULL, '全厂', 'all', 'approved', NULL, ?, ?)`).run(
+				row.title, row.category, row.tags, row.summary, row.content, row.source || "经验沉淀", now, row.author || "", now,
+			);
+			db.prepare("UPDATE experience SET status = 'approved', reviewer = ?, reviewed_at = ?, review_comment = ? WHERE id = ?").run(reviewer, now, body.comment || "审核通过,已入库", Number(body.id));
+		} else {
+			db.prepare("UPDATE experience SET status = 'rejected', reviewer = ?, reviewed_at = ?, review_comment = ? WHERE id = ?").run(reviewer, new Date().toISOString(), body.comment || "已驳回", Number(body.id));
+		}
+		res.end(JSON.stringify({ ok: true }));
+		return;
+	}
+
+	// 交付物:列表 / 下载
+	if (urlPath === "/api/artifacts") {
+		res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+		res.end(JSON.stringify(listArtifacts()));
+		return;
+	}
+	if (urlPath.startsWith("/api/artifacts/")) {
+		const file = normalize(urlPath.slice("/api/artifacts/".length)).replace(/^(\.\.(\/|\\|$))+/, "");
+		if (!/^[0-9a-zA-Z\-._]+\.md$/.test(file)) {
+			res.writeHead(403); res.end("Forbidden"); return;
+		}
+		try {
+			const content = readFileSync(join(ARTIFACT_DIR, file), "utf-8");
+			res.writeHead(200, { "Content-Type": MIME[".md"], "Content-Disposition": `attachment; filename="${encodeURIComponent(file)}"` });
+			res.end(content);
+		} catch {
+			res.writeHead(404); res.end("404 Not Found");
+		}
+		return;
+	}
+
+	// 文件对比
+	if (urlPath === "/api/compare" && req.method === "POST") {
+		const body = await readBody(req);
+		res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+		res.end(JSON.stringify(diffLines(body.a || "", body.b || "")));
 		return;
 	}
 
@@ -318,6 +496,11 @@ wss.on("connection", (ws) => {
 		}
 		if (msg.type !== "ask" || !msg.text) return;
 
+		// 更新专家模式并注入提示
+		currentRole = ["quality", "engineering", "equipment", "general"].includes(msg.role) ? msg.role : "general";
+		const roleName = getRole(currentRole).name;
+		const prompt = currentRole === "general" ? msg.text : `[当前专家模式:${roleName}] 请以「${roleName}」身份回答,优先检索知识库并引用有效标准与历史案例。\n\n${msg.text}`;
+
 		current = { userText: msg.text, segments: [] };
 
 		const unsubscribe = session.subscribe((event) => {
@@ -336,7 +519,7 @@ wss.on("connection", (ws) => {
 		});
 
 		try {
-			await session.prompt(msg.text);
+			await session.prompt(prompt);
 			saveHistory();
 			broadcast({ type: "done" });
 		} catch (err) {
