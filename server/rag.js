@@ -199,7 +199,7 @@ export function formatResults(results) {
 	}).join("\n\n");
 }
 
-/** 治理分析:过期 / 即将过期 / 重复 / 无版本 */
+/** 治理分析:过期 / 即将过期 / 重复 / 无版本 / 冲突 */
 export function governanceReport(db) {
 	const rows = db.prepare("SELECT * FROM knowledge WHERE status != 'archived' ORDER BY id DESC").all();
 	const today = todayStr();
@@ -220,5 +220,98 @@ export function governanceReport(db) {
 	for (const [key, list] of byTitle) {
 		if (list.length > 1) duplicates.push({ title: key, count: list.length, rows: list });
 	}
-	return { expired, expiring, noVersion, duplicates, total: rows.length };
+	// 冲突检测只针对当前有效(未过期)的知识
+	const active = rows.filter((r) => !(r.valid_to && r.valid_to < today));
+	const conflicts = detectConflicts(active);
+	return { expired, expiring, noVersion, duplicates, conflicts, total: rows.length };
+}
+
+/** —— 知识冲突检测 ——
+ * 检测"同一指标名在多条有效知识中给出不同阈值"的潜在冲突。
+ * 规则:句子含规范语气(要求/不低于/标准/≥…),从指标词之后取最近数值,按指标分组比对,
+ * 数值相对差 ≥2% 且来自不同条目时判为冲突。仅做候选提示,最终由人工确认。
+ */
+
+/** 指标关键词(按原文分组,避免"面铜/孔铜"混淆) */
+const METRIC_WORDS = [
+	"面铜", "孔铜", "铜厚", "镀铜厚度",
+	"线宽", "线距", "线间距", "阻抗",
+	"板厚", "光学点", "涨缩", "公差",
+	"铜球液位", "电流密度", "蚀刻",
+];
+
+/** 比较词 + 数值 + 可选单位(用于判断句子是否含阈值,并从指标词之后取第一个匹配) */
+const THRESHOLD_RE = /(不低于|不高于|不超过|不得低于|不得高于|大于|小于|≥|≤|>=|<=|要求|应为?|需为?|标准为?|控制为?)\s*(\d+(?:\.\d+)?)\s*(?:±\s*\d+(?:\.\d+)?)?\s*(um|μm|mm|mil|oz)?/;
+
+/** 单位统一换算成微米(仅用于同指标内数值比较) */
+function toMicron(value, unit) {
+	const u = String(unit || "").toLowerCase();
+	if (u === "mm") return value * 1000;
+	if (u === "mil") return value * 25.4;
+	if (u === "oz") return value * 35000; // 1oz 铜厚 ≈ 35um
+	return value; // um / μm / 无单位
+}
+
+/** 从单条知识正文提取 [{ metric, value(um), valueRaw, raw(原句) }] */
+function extractThresholds(row) {
+	const out = [];
+	const seen = new Set();
+	const lines = String(row.content || "").split(/\n+/).filter(Boolean);
+	for (const line of lines) {
+		const sents = line.split(/(?<=[。!?;；])\s*/).filter(Boolean);
+		for (const sent of sents) {
+			if (!THRESHOLD_RE.test(sent)) continue;
+			for (const w of METRIC_WORDS) {
+				const idx = sent.indexOf(w);
+				if (idx < 0) continue;
+				const tail = sent.slice(idx);
+				const m = tail.match(THRESHOLD_RE);
+				if (!m) continue;
+				const value = parseFloat(m[2]);
+				const unit = m[3] || "";
+				const key = `${w}|${value}|${unit}`;
+				if (seen.has(key)) continue;
+				seen.add(key);
+				out.push({
+					metric: w,
+					value: toMicron(value, unit),
+					valueRaw: `${value}${unit}`,
+					raw: sent.trim().slice(0, 120),
+				});
+				break; // 每句一个指标只取一次
+			}
+		}
+	}
+	return out;
+}
+
+/** 冲突检测:同指标出现多个不同阈值 */
+export function detectConflicts(rows) {
+	const byMetric = new Map();
+	for (const r of rows) {
+		for (const t of extractThresholds(r)) {
+			if (!byMetric.has(t.metric)) byMetric.set(t.metric, []);
+			byMetric.get(t.metric).push({ ...t, id: r.id, title: r.title, version: r.version, valid_to: r.valid_to });
+		}
+	}
+	const conflicts = [];
+	for (const [metric, entries] of byMetric) {
+		// 按数值聚类(相对差 <2% 视为同一阈值)
+		const groups = [];
+		for (const e of entries) {
+			let hit = groups.find((g) => Math.abs(g.value - e.value) / Math.max(1, Math.abs(g.value)) < 0.02);
+			if (!hit) {
+				hit = { value: e.value, valueRaw: e.valueRaw, items: [] };
+				groups.push(hit);
+			}
+			hit.items.push(e);
+		}
+		if (groups.length < 2) continue;
+		// 要求冲突来自不同知识条目(≥2 个不同 id)
+		const ids = new Set(groups.flatMap((g) => g.items.map((i) => i.id)));
+		if (ids.size < 2) continue;
+		conflicts.push({ metric, groups });
+	}
+	conflicts.sort((a, b) => b.groups.length - a.groups.length);
+	return conflicts;
 }

@@ -935,11 +935,13 @@
 			govSummary.innerHTML = `
 				<div class="gstat"><div class="n">${g.total}</div><div class="l">知识总数</div></div>
 				<div class="gstat"><div class="n" style="color:#b91c1c">${g.expired.length}</div><div class="l">已过期</div></div>
+				<div class="gstat"><div class="n" style="color:#b91c1c">${(g.conflicts || []).length}</div><div class="l">疑似冲突</div></div>
 				<div class="gstat"><div class="n" style="color:#b45309">${g.expiring.length}</div><div class="l">30天内到期</div></div>
 				<div class="gstat"><div class="n" style="color:#b45309">${g.duplicates.length}</div><div class="l">疑似重复</div></div>
 				<div class="gstat"><div class="n">${g.noVersion.length}</div><div class="l">无版本</div></div>`;
 			let html = "";
 			html += govSection("已过期", g.expired, "danger", (r) => `${r.title} · v${r.version || "?"} · 到期 ${r.valid_to}`);
+			html += govConflicts(g.conflicts || []);
 			html += govSection("30天内到期", g.expiring, "warn", (r) => `${r.title} · v${r.version || "?"} · 到期 ${r.valid_to}`);
 			html += govSection("疑似重复(同标题多版本)", g.duplicates, "warn", (d) => `${d.title} · ${d.count} 个版本`);
 			html += govSection("无版本标识", g.noVersion, "warn", (r) => `${r.title} · ${r.category || ""}`);
@@ -967,6 +969,26 @@
 			return `<div class="gov-item"><div class="info"><div class="t">${escapeHtml(fmt(it))}</div>${dup ? `<div class="m">${escapeHtml(dup)}</div>` : ""}</div>${id ? `<button data-act="archive" data-id="${id}">归档</button><button data-act="delete" data-id="${id}">删除</button>` : ""}</div>`;
 		}).join("");
 		return `<div class="gov-section"><div class="sec-title">${label} <span class="badge ${badge === "danger" ? "danger" : "warn"}">${items.length}</span></div>${rows}</div>`;
+	}
+	// 疑似冲突:同指标多个不同阈值,列出各组阈值及涉及条目,供人工确认归档/删除
+	function govConflicts(list) {
+		if (!list || !list.length) return "";
+		const rows = list.map((c) => {
+			const unique = [];
+			const seen = new Set();
+			for (const it of c.groups.flatMap((g) => g.items)) {
+				if (seen.has(it.id)) continue;
+				seen.add(it.id);
+				unique.push(it);
+			}
+			const groupsHtml = c.groups.map((g) =>
+				`<div class="m">阈值 <b>${escapeHtml(g.valueRaw)}</b> → ${g.items.map((i) => `#${i.id} ${escapeHtml(i.title)} v${i.version || "?"}`).join("、")}</div>`
+			).join("");
+			const snippetsHtml = unique.map((i) => `<div class="m">↳ ${escapeHtml(i.raw)}</div>`).join("");
+			const btns = unique.map((i) => `<button data-act="archive" data-id="${i.id}">归档 #${i.id}</button><button data-act="delete" data-id="${i.id}">删除 #${i.id}</button>`).join("");
+			return `<div class="gov-item"><div class="info"><div class="t">⚠️ 指标「${escapeHtml(c.metric)}」存在多个不同阈值</div>${groupsHtml}${snippetsHtml}</div>${btns}</div>`;
+		}).join("");
+		return `<div class="gov-section"><div class="sec-title">疑似冲突(同指标多阈值) <span class="badge danger">${list.length}</span></div>${rows}</div>`;
 	}
 
 	// —— 登录 ——
